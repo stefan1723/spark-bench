@@ -22,6 +22,7 @@ import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import breeze.stats.distributions.{Poisson, Rand}
 import com.ibm.sparktc.sparkbench.utils.{SaveModes, SparkBenchException}
+import org.apache.spark.rdd.RDD
 
 case class SleepResult(
                         name: String,
@@ -147,13 +148,13 @@ case class Sleep(
                 distributionMax: Option[Long] = None
               ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (t, _) = time {
       Thread.sleep(sleepMS)
     }
 
-    spark.createDataFrame(Seq(SleepResult("sleep", timestamp, t)))
+    (spark.createDataFrame(Seq(SleepResult("sleep", timestamp, t))), None)
   }
 
 }

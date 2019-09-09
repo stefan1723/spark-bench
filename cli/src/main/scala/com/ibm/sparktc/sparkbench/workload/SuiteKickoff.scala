@@ -18,6 +18,7 @@
 package com.ibm.sparktc.sparkbench.workload
 
 import com.ibm.sparktc.sparkbench.utils.SparkFuncs._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, lit}
 
@@ -62,18 +63,20 @@ object SuiteKickoff {
     verifyOutput(s.benchmarkOutput, s.saveMode, spark)
 
     // Translate the maps into runnable workloads
-    val workloads: Seq[Workload] = s.workloadConfigs.map(ConfigCreator.mapToConf)
-
-    val dataframes: Seq[DataFrame] = (0 until s.repeat).flatMap { i =>
-      // This will produce one DataFrame of one row for each workload in the sequence.
-      // We're going to produce one coherent DF later from these
-      val dfSeqFromOneRun: Seq[DataFrame] = {
-        if (s.parallel) runParallel(workloads, spark)
-        else runSerially(workloads, spark)
-      }
-      // Indicate which run of this suite this was.
-      dfSeqFromOneRun.map(_.withColumn("run", lit(i)))
-    }
+//    val workloads: Seq[Workload] = s.workloadConfigs.map(ConfigCreator.mapToConf)
+    val dataframes: Seq[DataFrame] = s.scheduler.run(s, spark)
+//    (0 until s.repeat).flatMap { i =>
+//      // This will produce one DataFrame of one row for each workload in the sequence.
+//      // We're going to produce one coherent DF later from these
+//      val dfSeqFromOneRun: Seq[DataFrame] = {
+//        s.scheduler.run(s, spark)
+////        if (s.runMode) runParallel(workloads, spark)
+////        else runSerially(workloads, spark)
+////        runSerially(workloads, spark)
+//      }
+//      // Indicate which run of this suite this was.
+//      dfSeqFromOneRun.map(_.withColumn("run", lit(i)))
+//    }
 
     // getting the Spark confs so we can output them in the results.
     val strSparkConfs = spark.conf.getAll
@@ -88,14 +91,16 @@ object SuiteKickoff {
     if(s.benchmarkOutput.nonEmpty) writeToDisk(s.benchmarkOutput.get, s.saveMode, plusDescription, spark)
   }
 
-  private def runParallel(workloadConfigs: Seq[Workload], spark: SparkSession): Seq[DataFrame] = {
+  private def runParallel(workloadConfigs: Seq[Workload], spark: SparkSession): Seq[(DataFrame,
+    Option[RDD[_]])] = {
     val confSeqPar = workloadConfigs.par
     confSeqPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(confSeqPar.size))
-    confSeqPar.map(_.run(spark)).seq
+    confSeqPar.map(_.run(spark, None)).seq
   }
 
-  private def runSerially(workloadConfigs: Seq[Workload], spark: SparkSession): Seq[DataFrame] = {
-    workloadConfigs.map(_.run(spark))
+  private def runSerially(workloadConfigs: Seq[Workload], spark: SparkSession): Seq[(DataFrame,
+    Option[RDD[_]])] = {
+    workloadConfigs.map(_.run(spark, None))
   }
 
   private def joinDataFrames(seq: Seq[DataFrame], spark: SparkSession): DataFrame = {

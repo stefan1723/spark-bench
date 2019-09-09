@@ -29,14 +29,18 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 object SparkLaunch extends App {
+  assert(args.nonEmpty)
+  val path = args.head
+  val (confSeq: Seq[SparkJobConf], parallel: Boolean) = mkConfs(new File(path))
+  launchJobs(confSeq, parallel)
 
-  override def main(args: Array[String]): Unit = {
-    assert(args.nonEmpty)
-    val path = args.head
-    val (confSeq: Seq[SparkJobConf], parallel: Boolean) = mkConfs(new File(path))
-
-    launchJobs(confSeq, parallel)
-  }
+//  override def main(args: Array[String]): Unit = {
+//    assert(args.nonEmpty)
+//    val path = args.head
+//    val (confSeq: Seq[SparkJobConf], parallel: Boolean) = mkConfs(new File(path))
+//
+//    launchJobs(confSeq, parallel)
+//  }
 
   def mkConfs(file: File): (Seq[SparkJobConf], Boolean) = {
     val config: Config = ConfigFactory.parseFile(file)

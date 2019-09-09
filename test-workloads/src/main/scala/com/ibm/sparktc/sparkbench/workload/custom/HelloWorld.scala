@@ -20,6 +20,7 @@ package com.ibm.sparktc.sparkbench.workload.custom
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import com.ibm.sparktc.sparkbench.utils.SaveModes
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 // Create a quick case class with a member for each field we want to return in the results.
@@ -72,7 +73,7 @@ case class HelloString(
     doWorkload is an abstract method from Workload. It may or may not take input data, and it will
       output a one-row DataFrame made from the results case class we defined above.
   */
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     // Every workload returns a timestamp from the start of its doWorkload() method
     val timestamp = System.currentTimeMillis()
     /*
@@ -88,6 +89,7 @@ case class HelloString(
     /*
       And now we have everything we need to construct our results case class and create a DataFrame!
     */
-    spark.createDataFrame(Seq(HelloStringResult(HelloString.name, timestamp, t, returnedString)))
+    (spark.createDataFrame(Seq(HelloStringResult(HelloString.name, timestamp, t, returnedString))
+    ), None)
   }
 }

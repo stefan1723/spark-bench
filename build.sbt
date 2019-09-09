@@ -19,8 +19,10 @@ import Dependencies._
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import scala.sys.process._
 
-scalaVersion in ThisBuild := "2.11.8"
+logLevel := Level.Error
+ThisBuild / scalaVersion := "2.11.12"
 
 /*
     **********************************************************************************
@@ -33,15 +35,19 @@ val sparkBenchLaunchJar = settingKey[String]("jar name and relative path for spa
 val assemblyFile = settingKey[String]("folder where assembled jars go")
 val sparklaunchTestResourcesJarsFile = settingKey[String]("folder where compiled jar goes")
 
+
+
+assembly / assemblyMergeStrategy := { case _ => MergeStrategy.discard}
+
 lazy val commonSettings = Seq(
   organization := "com.ibm.sparktc",
-  parallelExecution in Test := false,
-  test in assembly := {},
+  Test / parallelExecution := false,
+  assembly / test := {},
   sparkBenchJar := s"spark-bench-${version.value}.jar",
   sparkBenchLaunchJar := s"spark-bench-launch-${version.value}.jar",
   assemblyFile := s"${baseDirectory.value.getParent}/target/assembly",
   sparklaunchTestResourcesJarsFile := s"${baseDirectory.value.getPath}/src/test/resources/jars/",
-  testOptions in Test += Tests.Argument("-oF")
+  Test / testOptions += Tests.Argument("-oF")
 )
 
 /*
@@ -72,15 +78,15 @@ lazy val cli = project
     cleanJars := {
       val log = streams.value.log
       log.info("Cleaning up jars before assembling")
-      s"rm ${assemblyFile.value}/*.jar".!
-      s"rm ./spark-launch/src/test/resources/jars/*.jar".!
+      s"rm ${assemblyFile.value}/*.jar".!!
+      s"rm ./spark-launch/src/test/resources/jars/*.jar".!!
       log.info("Done cleaning jars.")
     },
-    assembly in Compile := {
-      ((assembly in Compile) dependsOn(cleanJars in Test)).value
+    Compile / assembly := {
+      ((Compile / assembly) dependsOn(Test / cleanJars)).value
     },
-    mainClass in assembly := Some("com.ibm.sparktc.sparkbench.cli.CLIKickoff"),
-    assemblyOutputPath in assembly := new File(s"${assemblyFile.value}/${sparkBenchJar.value}"),
+    assembly / mainClass := Some("com.ibm.sparktc.sparkbench.cli.CLIKickoff"),
+    assembly / assemblyOutputPath := new File(s"${assemblyFile.value}/${sparkBenchJar.value}"),
     libraryDependencies ++= sparkDeps,
     libraryDependencies ++= otherCompileDeps,
     libraryDependencies ++= testDeps,
@@ -112,27 +118,27 @@ lazy val `spark-launch` = project
     removeJar := {
       val log = streams.value.log
       log.info("Removing cli jars assembled for test.")
-      s"rm -rf ${sparklaunchTestResourcesJarsFile.value}".!
+      s"rm -rf ${sparklaunchTestResourcesJarsFile.value}".!!
       log.info("Done removing jars")
     },
-    moveJar in Test := {
+    Test / moveJar := {
       val log = streams.value.log
       log.info("Assembling spark-bench and custom-workload JARs...")
-      (assembly in Compile in cli).value
+      (cli / Compile / assembly).value
       log.info("Moving assembled JARs to resources folder for test")
-      s"mkdir -p ${sparklaunchTestResourcesJarsFile.value}".!
-      s"cp ${assemblyFile.value}/${sparkBenchJar.value} ${sparklaunchTestResourcesJarsFile.value}".!
-      val customTestJar = (Keys.`package` in Compile in `test-workloads`).value
-      s"cp $customTestJar ${sparklaunchTestResourcesJarsFile.value}".!
+      s"mkdir -p ${sparklaunchTestResourcesJarsFile.value}".!!
+      s"cp ${assemblyFile.value}/${sparkBenchJar.value} ${sparklaunchTestResourcesJarsFile.value}".!!
+      val customTestJar = (`test-workloads` / Compile / Keys.`package`).value
+      s"cp $customTestJar ${sparklaunchTestResourcesJarsFile.value}".!!
       log.info("Done moving files.")
     },
-    test in Test := {
-      ((test in Test) dependsOn(moveJar in Test)).value
+    Test / test := {
+      ((Test / test) dependsOn(Test / moveJar)).value
     },
     commonSettings,
     name := "spark-bench-launch",
-    mainClass in assembly := Some("com.ibm.sparktc.sparkbench.sparklaunch.SparkLaunch"),
-    assemblyOutputPath in assembly := new File(s"${assemblyFile.value}/${sparkBenchLaunchJar.value}"),
+    assembly / mainClass:= Some("com.ibm.sparktc.sparkbench.sparklaunch.SparkLaunch"),
+    assembly / assemblyOutputPath := new File(s"${assemblyFile.value}/${sparkBenchLaunchJar.value}"),
     libraryDependencies ++= sparkDeps,
     libraryDependencies ++= otherCompileDeps,
     libraryDependencies ++= testDeps,
@@ -152,9 +158,9 @@ dist := {
   val log = streams.value.log
   log.info("Creating distribution...")
   log.info("Assembling spark-bench jar...")
-  dependsOn((assembly in Compile in cli).value)
+//  dependsOn((cli / assembly / Compile).value)
   log.info("Assembling spark-bench-launch jar...")
-  dependsOn((assembly in Compile in `spark-launch`).value)
+//  dependsOn((`spark-launch` / Compile / assembly).value)
   log.info("Done assembling jars")
 
   val dir = baseDirectory.value.getName
@@ -162,18 +168,18 @@ dist := {
   val tmpFolder = s"./${name.value}_${version.value}"
 
   log.info(s"Creating folder $tmpFolder")
-  s"mkdir $tmpFolder".!
+  s"mkdir $tmpFolder".!!
   log.info(s"Creating folder $tmpFolder/lib")
-  s"mkdir $tmpFolder/lib".!
+  s"mkdir $tmpFolder/lib".!!
 
   log.info("Copying files:")
   log.info("...copying README.md")
-  s"cp readme.md $tmpFolder".!
+  s"cp readme.md $tmpFolder".!!
   log.info("...copying bin/")
 
   // MAKE SURE YOU DON'T PUT TRAILING SLASHES ON THESE FILES!! It changes behavior between GNU cp and BSD cp
   val binFolder = s"${baseDirectory.value.getPath}/bin"
-  s"cp -r $binFolder $tmpFolder".!
+  s"cp -r $binFolder $tmpFolder".!!
   log.info("...copying contents of target/assembly/")
 
   // Reverting to java API here because cp works differently between the GNU and BSD versions. >:(
@@ -190,7 +196,7 @@ dist := {
 
   // MAKE SURE YOU DON'T PUT TRAILING SLASHES ON THESE FILES!! It changes behavior between GNU cp and BSD cp
   val examplesFolder = s"${baseDirectory.value.getPath}/examples"
-  s"cp -r $examplesFolder $tmpFolder".!
+  s"cp -r $examplesFolder $tmpFolder".!!
 
   log.info("Done copying files.")
 
@@ -201,7 +207,7 @@ dist := {
   }
 
   log.info(s"Creating tar file: $artifactName")
-  s"tar -zcf ./$artifactName $tmpFolder".!
+  s"tar -zcf ./$artifactName $tmpFolder".!!
   log.info("Done creating tar file")
   log.info(s"Distribution created: $artifactName")
 }
@@ -215,9 +221,9 @@ rmDist := {
 
   val tmpFolder = s"./${name.value}_${version.value}"
   log.info(s"Removing $tmpFolder...")
-  s"rm -rf $tmpFolder".!
+  s"rm -rf $tmpFolder".!!
   log.info(s"Removing $tmpFolder.tgz...")
-  s"""rm -f $tmpFolder.tgz""".!
+  s"""rm -f $tmpFolder.tgz""".!!
   log.info("Distribution files removed.")
 }
 
@@ -225,11 +231,11 @@ val rmTemp = TaskKey[Unit]("rmTemp", "removes temporary testing files")
 rmTemp := {
   val tmpFolder = "/tmp/spark-bench-scalatest"
   streams.value.log.info(s"Removing $tmpFolder...")
-  s"rm -rf $tmpFolder".!
+  s"rm -rf $tmpFolder".!!
 }
 
 dist := (dist dependsOn assembly).value
 
 clean := (clean dependsOn rmDist dependsOn rmTemp).value
 
-clean := (clean dependsOn (removeJar in Test in `spark-launch`)).value
+clean := (clean dependsOn (`spark-launch` / Test / removeJar)).value

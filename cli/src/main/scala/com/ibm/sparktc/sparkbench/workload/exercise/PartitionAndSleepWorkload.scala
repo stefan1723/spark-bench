@@ -56,7 +56,7 @@ case class PartitionAndSleepWorkload(input: Option[String] = None,
     yeah.collect()
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val (t, _) = doStuff(spark)
 
     val schema = StructType(
@@ -69,7 +69,7 @@ case class PartitionAndSleepWorkload(input: Option[String] = None,
 
     val timeList = spark.sparkContext.parallelize(Seq(Row("timedsleep", System.currentTimeMillis(), t)))
 
-    spark.createDataFrame(timeList, schema)
+    (spark.createDataFrame(timeList, schema), None)
   }
 }
 

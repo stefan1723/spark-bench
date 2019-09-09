@@ -20,6 +20,7 @@ package com.ibm.sparktc.sparkbench.workload.exercise
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions.{getOrDefault, time}
 import com.ibm.sparktc.sparkbench.utils.SaveModes
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.math.random
@@ -60,10 +61,10 @@ case class SparkPi(input: Option[String] = None,
     piApproximate
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (t, pi) = time(sparkPi(spark))
-    spark.createDataFrame(Seq(SparkPiResult("sparkpi", timestamp, t, pi)))
+    (spark.createDataFrame(Seq(SparkPiResult("sparkpi", timestamp, t, pi))), None)
   }
 
 }

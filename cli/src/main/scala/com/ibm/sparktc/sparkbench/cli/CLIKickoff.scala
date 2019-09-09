@@ -20,8 +20,8 @@ package com.ibm.sparktc.sparkbench.cli
 import org.slf4j.{Logger, LoggerFactory}
 import com.ibm.sparktc.sparkbench.workload.MultipleSuiteKickoff
 
-object CLIKickoff extends App {
-  override def main(args: Array[String]): Unit = {
+object CLIKickoff {
+  def main(args: Array[String]): Unit = {
     val log: Logger = LoggerFactory.getLogger(this.getClass)
     log.info(s"args received: ${args.mkString(", ")}")
     if(args.isEmpty) throw new IllegalArgumentException("CLIKickoff received no arguments")

@@ -20,6 +20,7 @@ package com.ibm.sparktc.sparkbench.workload
 import com.ibm.sparktc.sparkbench.utils.{SaveModes, SparkBenchException}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.ibm.sparktc.sparkbench.utils.SparkFuncs._
+import org.apache.spark.rdd.RDD
 
 trait WorkloadDefaults {
   val name: String
@@ -40,11 +41,12 @@ trait Workload {
 
   /**
     * Actually run the workload.  Takes an optional DataFrame as input if the user
-    * supplies an inputDir, and returns the generated results DataFrame.
+    * supplies an inputDir, and returns the generated results and data DataFrame. The last can
+    * be used to create a workload chain.
     */
-  def doWorkload(df: Option[DataFrame], sparkSession: SparkSession): DataFrame
+  def doWorkload(df: Option[DataFrame], sparkSession: SparkSession): (DataFrame, Option[RDD[_]])
 
-  def run(spark: SparkSession): DataFrame = {
+  def run(spark: SparkSession, inDf: Option[DataFrame]): (DataFrame, Option[RDD[Any]]) = {
 
     verifyOutput(output, saveMode, spark)
     if(saveMode == SaveModes.append){
@@ -56,9 +58,8 @@ trait Workload {
       val rawDF = load(spark, in)
       reconcileSchema(rawDF)
     }
-
-    val res = doWorkload(df, spark).coalesce(1)
-    addConfToResults(res, toMap)
+    val (res, outData) = doWorkload(df, spark)
+    (addConfToResults(res.coalesce(1), toMap), None)
   }
 
   def toMap: Map[String, Any] =

@@ -22,6 +22,7 @@ import com.ibm.sparktc.sparkbench.utils.GeneralFunctions.{any2Long, getOrDefault
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 import org.apache.spark.graphx.util.GraphGenerators
+import org.apache.spark.rdd.RDD
 
 object GraphDataGen extends WorkloadDefaults {
 
@@ -98,7 +99,7 @@ case class GraphDataGen (
                           numPartitions: Int = 0
                         ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (generateTime, graph) = time(GraphGenerators.logNormalGraph(spark.sparkContext, numVertices, numPartitions, mu, sigma))
     val (convertTime, out) = time(graph.edges.map(e => s"${e.srcId.toString} ${e.dstId}"))
@@ -116,6 +117,6 @@ case class GraphDataGen (
     )
     val total = generateTime + convertTime + saveTime
     val timeList = spark.sparkContext.parallelize(Seq(Row(GraphDataGen.name, timestamp, generateTime, convertTime, saveTime, total)))
-    spark.createDataFrame(timeList, timeResultSchema)
+    (spark.createDataFrame(timeList, timeResultSchema), Some(graph.triplets))
   }
 }

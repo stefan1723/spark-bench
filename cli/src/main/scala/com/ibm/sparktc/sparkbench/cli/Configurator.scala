@@ -17,12 +17,14 @@
 
 package com.ibm.sparktc.sparkbench.cli
 
-import com.ibm.sparktc.sparkbench.utils.SaveModes
+import com.ibm.sparktc.sparkbench.utils.{SaveModes, TypesafeAccessories}
 import com.ibm.sparktc.sparkbench.utils.TypesafeAccessories.configToMapStringSeqAny
 
 import scala.collection.JavaConverters._
 import com.ibm.sparktc.sparkbench.workload.{MultiSuiteRunConfig, Suite}
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
+import main.scala.de.ikt.vamos.bench.scheduler.SchedulerBase
+import main.scala.de.ikt.vamos.bench.workload.ArrivalProcess
 
 import scala.util.Try
 
@@ -56,19 +58,23 @@ object Configurator {
 
   def parseSuite(config: Config): Suite = {
     val descr: Option[String] = Try(config.getString("descr")).toOption
+    val runMode: String = Try(config.getString("run-mode")).getOrElse("serial")
     val parallel: Boolean = Try(config.getBoolean("parallel")).getOrElse(false)
     val repeat: Int = Try(config.getInt("repeat")).getOrElse(1)
     val output: Option[String] = Try(config.getString("benchmark-output")).toOption
     val saveMode: String = Try(config.getString("save-mode")).getOrElse(SaveModes.error)
     val workloads: Seq[Map[String, Seq[Any]]]  = getConfigListByName("workloads", config).map(configToMapStringSeqAny)
+//    if (runMode == "split-merge" || runMode == "fork-join" || runMode == "single-queue-fork-join");
+//    val arrivalProcess = config.getConfig("arival-distribution")
+    val scheduler = SchedulerBase.apply(runMode, Try{config.getConfig("arrival-distribution")}
+  .getOrElse(ConfigFactory.empty()).root().unwrapped().asScala.toMap)
 
-    Suite.build(
-      workloads,
-      descr,
-      repeat,
-      parallel,
-      saveMode,
-      output
-    )
+    Suite.build(workloads, descr, repeat, parallel, scheduler, saveMode, output)
   }
+
+//  def parseArrivalProcess(config: Option[Config]): Option[ArrivalProcess] = {
+//    if (config.isEmpty) None
+//    val distribution = config.get.getString(distribution)
+//    None
+//  }
 }

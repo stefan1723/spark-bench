@@ -52,7 +52,7 @@ case class KMeansDataGen(
                           numPartitions: Int
                         ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
 
     val (generateTime, data): (Long, RDD[Array[Double]]) = time {
@@ -91,6 +91,6 @@ case class KMeansDataGen(
 
     val timeList = spark.sparkContext.parallelize(Seq(Row("kmeans", timestamp, generateTime, convertTime, saveTime, total)))
 
-    spark.createDataFrame(timeList, timeResultSchema)
+    (spark.createDataFrame(timeList, timeResultSchema), Some(dataDF.rdd))
   }
 }

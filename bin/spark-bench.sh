@@ -23,10 +23,10 @@ realpath () {
 
 bin=$(dirname $(realpath $0))
 basedir=$(dirname "$bin")
-if [[ -d "$basedir/lib" ]]
-    then jars="$basedir/lib"
-elif [[ -d "$basedir/target/assembly" ]]
+if [[ -d "$basedir/target/assembly" ]]
     then jars="$basedir/target/assembly"
+elif [[ -d "$basedir/lib" ]]
+    then jars="$basedir/lib"
 else
     echo "Could not find spark-bench JARs." >&2
     exit 1

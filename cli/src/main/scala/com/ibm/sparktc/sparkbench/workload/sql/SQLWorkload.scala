@@ -21,6 +21,7 @@ import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import com.ibm.sparktc.sparkbench.utils.SaveModes
 import com.ibm.sparktc.sparkbench.utils.SparkFuncs._
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 case class SQLWorkloadResult(
@@ -73,7 +74,7 @@ case class SQLWorkload (input: Option[String],
     }
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (loadtime, df) = loadFromDisk(spark)
     val (querytime, res) = query(df, spark)
@@ -83,7 +84,7 @@ case class SQLWorkload (input: Option[String],
     }
     val total = loadtime + querytime + savetime
 
-    spark.createDataFrame(Seq(
+    (spark.createDataFrame(Seq(
       SQLWorkloadResult(
         "sql",
         timestamp,
@@ -92,7 +93,7 @@ case class SQLWorkload (input: Option[String],
         savetime,
         total
       )
-    ))
+    )), Some(res.rdd))
   }
 
 }

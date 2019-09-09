@@ -23,6 +23,7 @@ import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator => BCE}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 // ¯\_(ツ)_/¯
@@ -85,7 +86,7 @@ case class LogisticRegressionWorkload(
     ds
   }
 
-  override def doWorkload(df: Option[DataFrame], spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame], spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val startTime = System.currentTimeMillis
     val (ltrainTime, d_train) = ld(s"${input.get}")(spark)
     val (ltestTime, d_test) = ld(s"$testFile")(spark)
@@ -97,7 +98,7 @@ case class LogisticRegressionWorkload(
 
     //spark.createDataFrame(Seq(SleepResult("sleep", timestamp, t)))
 
-    spark.createDataFrame(Seq(LogisticRegressionResult(
+    (spark.createDataFrame(Seq(LogisticRegressionResult(
       name = "lr-bml",
       appid = spark.sparkContext.applicationId,
       startTime,
@@ -111,6 +112,6 @@ case class LogisticRegressionWorkload(
       countTime,
       loadTime + trainTime + testTime,
       areaUnderROC
-    )))
+    ))), None)
   }
 }

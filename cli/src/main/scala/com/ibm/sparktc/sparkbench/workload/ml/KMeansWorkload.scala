@@ -73,7 +73,7 @@ case class KMeansWorkload(input: Option[String],
                           seed: Long,
                           maxIterations: Int) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame], spark: SparkSession): DataFrame = {
+  override def doWorkload(df: Option[DataFrame], spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
 
     val (loadtime, data) = loadToCache(df.get, spark) // Should fail loudly if df == None
@@ -96,7 +96,7 @@ case class KMeansWorkload(input: Option[String],
 
     val timeList = spark.sparkContext.parallelize(Seq(Row("kmeans", timestamp, loadtime, trainTime, testTime, saveTime, total)))
 
-    spark.createDataFrame(timeList, schema)
+    (spark.createDataFrame(timeList, schema), Some(data))
   }
 
   def loadToCache(df: DataFrame, spark: SparkSession): (Long, RDD[Vector]) = {

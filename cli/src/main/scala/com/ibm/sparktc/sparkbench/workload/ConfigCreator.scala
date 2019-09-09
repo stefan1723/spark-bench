@@ -24,6 +24,7 @@ import com.ibm.sparktc.sparkbench.utils.SparkBenchException
 import com.ibm.sparktc.sparkbench.workload.exercise._
 import com.ibm.sparktc.sparkbench.workload.ml.{KMeansWorkload, LogisticRegressionWorkload}
 import com.ibm.sparktc.sparkbench.workload.sql.SQLWorkload
+import de.ikt.vamos.bench.workload.DistributedBlocking
 
 object ConfigCreator {
 
@@ -37,7 +38,8 @@ object ConfigCreator {
     SparkPi,
     KMeansDataGen,
     LinearRegressionDataGen,
-    GraphDataGen
+    GraphDataGen,
+    DistributedBlocking
   ).map(wk => wk.name -> wk).toMap
 
   private def loadCustom(name: String): WorkloadDefaults = {

@@ -7,6 +7,8 @@
 *.pyo
 *.swp
 *~
+*.jar
+*.bak
 .DS_Store
 .idea/
 .idea_modules/
