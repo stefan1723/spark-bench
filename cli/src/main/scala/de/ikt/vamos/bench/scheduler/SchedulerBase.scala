@@ -13,10 +13,13 @@ import scala.collection.parallel.ForkJoinTaskSupport
   * A possible refactorization would be to store the suite in the scheduler.
   */
 trait SchedulerBase {
+  var completed = false
   def run(suite: Suite, spark: SparkSession): Seq[DataFrame]
 
   def getWorkloadConfigs(suite: Suite): Seq[Workload] = suite.workloadConfigs.map(ConfigCreator
     .mapToConf)
+
+  def isCompleted: Boolean = completed
 
   protected def runParallel(workloadConfigs: Seq[Workload], spark: SparkSession):
   Seq[(DataFrame, Option[RDD[_]])] = {

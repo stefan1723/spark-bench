@@ -9,6 +9,7 @@ import scala.collection.parallel.ForkJoinTaskSupport
 
 class ParallelScheduler extends SchedulerBase {
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
+    completed = true
     println("Should run ParallelScheduler")
     println(s"WARNING: This scheduler is not yet implemented!")
     val workloads = getWorkloadConfigs(suite)

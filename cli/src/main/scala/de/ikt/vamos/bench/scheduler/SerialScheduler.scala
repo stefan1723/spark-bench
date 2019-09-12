@@ -9,6 +9,7 @@ import scala.collection.parallel.ForkJoinTaskSupport
 
 class SerialScheduler extends SchedulerBase {
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
+    completed = true
     println("Should run SerialScheduler")
     val workloads = getWorkloadConfigs(suite)
     (0 until suite.repeat).flatMap { i =>

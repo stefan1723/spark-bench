@@ -20,13 +20,17 @@ package com.ibm.sparktc.sparkbench.workload
 import com.ibm.sparktc.sparkbench.utils.TypesafeAccessories.splitGroupedConfigToIndividualConfigs
 import main.scala.de.ikt.vamos.bench.scheduler.SchedulerBase
 
-case class Suite(description: Option[String], repeat: Int = 1, parallel: Boolean, scheduler: SchedulerBase, benchmarkOutput: Option[String], saveMode: String, workloadConfigs: Seq[Map[String, Any]])
+case class Suite(description: Option[String], repeat: Int = 1, repeatBuf: Int = -1,
+                 parallel: Boolean, scheduler: SchedulerBase, benchmarkOutput: Option[String], saveMode: String, workloadConfigs: Seq[Map[String, Any]])
 
 object Suite {
-  def build(confsFromArgs: Seq[Map[String, Seq[Any]]], description: Option[String], repeat: Int, parallel: Boolean, scheduler: SchedulerBase, saveMode: String, benchmarkOutput: Option[String]): Suite = {
+  def build(confsFromArgs: Seq[Map[String, Seq[Any]]], description: Option[String], repeat: Int,
+            repeatBuf: Int, parallel: Boolean, scheduler: SchedulerBase, saveMode: String,
+            benchmarkOutput: Option[String]): Suite = {
     Suite(
       description,
       repeat,
+      repeatBuf,
       parallel,
       scheduler,
       benchmarkOutput,
