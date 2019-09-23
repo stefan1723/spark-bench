@@ -17,6 +17,7 @@
 
 package com.ibm.sparktc.sparkbench.workload
 
+import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 
 import scala.collection.parallel.ForkJoinTaskSupport
@@ -24,6 +25,7 @@ import scala.collection.parallel.ForkJoinTaskSupport
 object MultipleSuiteKickoff {
   def run(seq: Seq[MultiSuiteRunConfig]): Unit = seq.foreach { contextConf =>
     val spark = createSparkContext(seq)
+    waitForExecutors(spark)
     if (contextConf.suitesParallel) runSuitesInParallel(contextConf.suites, spark)
     else runSuitesSerially(contextConf.suites, spark)
   }
@@ -42,5 +44,20 @@ object MultipleSuiteKickoff {
     // if any configs have hive enabled, enable it for all
     val builderWithHive = if (configs.exists(_.enableHive)) builder.enableHiveSupport else builder
     builderWithHive.getOrCreate
+  }
+
+  private def waitForExecutors(spark: SparkSession): Unit = {
+    val requestedExecutors = spark.sparkContext.getConf.getInt("spark.executor.instances", 1)
+    var activeExecutors = numActiveExecutors(spark.sparkContext)
+    while (activeExecutors < requestedExecutors) {
+      Thread.sleep(1000)
+      println(s"Waiting for executors. $activeExecutors/$requestedExecutors")
+      activeExecutors = numActiveExecutors(spark.sparkContext)
+    }
+
+  }
+
+  private def numActiveExecutors(sc: SparkContext): Int = {
+    sc.getExecutorMemoryStatus.toList.length - 1
   }
 }
