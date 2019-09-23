@@ -54,7 +54,8 @@ object MultipleSuiteKickoff {
       println(s"Waiting for executors. $activeExecutors/$requestedExecutors")
       activeExecutors = numActiveExecutors(spark.sparkContext)
     }
-
+    println(s"Got $activeExecutors/$requestedExecutors executors. Waiting additional 5 seconds.")
+    Thread.sleep(5000)
   }
 
   private def numActiveExecutors(sc: SparkContext): Int = {
