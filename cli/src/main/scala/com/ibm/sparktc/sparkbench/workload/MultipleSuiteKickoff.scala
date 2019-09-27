@@ -28,6 +28,7 @@ object MultipleSuiteKickoff {
     waitForExecutors(spark)
     if (contextConf.suitesParallel) runSuitesInParallel(contextConf.suites, spark)
     else runSuitesSerially(contextConf.suites, spark)
+    spark.close()
   }
 
   private def runSuitesInParallel(suiteSeq: Seq[Suite], spark: SparkSession): Unit = {

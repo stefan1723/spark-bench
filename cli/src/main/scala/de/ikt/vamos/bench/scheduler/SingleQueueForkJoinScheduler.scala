@@ -27,7 +27,6 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
 
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
     println(s"Should run SingleQueueForkJoinScheduler with ${suite.repeat} repetitions")
-    println(s"WARNING: This scheduler is not yet implemented!")
 
     val workloads = getWorkloadConfigs(suite)
 
@@ -35,13 +34,15 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
       Math.min(suite.repeatBuf, suite.repeat - completedRepetitions)
     (0 until numOfRepetitions).foreach { i =>
       lastArrivalTime = System.currentTimeMillis()
-
+      val tmpRun = completedRepetitions
+      val tmpinterarrivalTime = interarrivalTime
+      val tmpThisArrivalTime = lastArrivalTime
       val dfSeqFromOneRun: ForkJoinTask[Seq[DataFrame]] = ForkJoinTask.adapt(
             new java.util.concurrent.Callable[Seq[DataFrame]]() {
         def call(): Seq[DataFrame] = {
-          val runNum = completedRepetitions
-          val thisInterarrivalTime = interarrivalTime
-          val thisArrivalTime = lastArrivalTime
+          val runNum = tmpRun
+          val thisInterarrivalTime = tmpinterarrivalTime
+          val thisArrivalTime = tmpThisArrivalTime
           runWorkloads(suite.parallel, workloads, spark).map(_._1).map(res => res.withColumn
           ("run", lit(runNum)).withColumn("interarrivalTime", lit(thisInterarrivalTime))
           .withColumn("shouldArrive", lit(thisArrivalTime)))

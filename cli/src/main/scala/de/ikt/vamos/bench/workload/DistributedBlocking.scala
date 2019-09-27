@@ -4,7 +4,7 @@ import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import com.ibm.sparktc.sparkbench.utils.SaveModes
 import de.ikt.vamos.bench.distribution.{DistributionBase, ExponentialDistribution}
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -27,6 +27,7 @@ object DistributedBlocking extends WorkloadDefaults {
 }
 case class DistributedBlockingResult(
                                 name: String,
+                                stageId: Long,
                                 timestamp: Long,
                                 endTimestamp: Long,
                                 generatedTimes: String
@@ -43,13 +44,13 @@ case class DistributedBlocking(input: Option[String] = None, output: Option[Stri
     val timestamp = System.currentTimeMillis()
 //    val serviceDistribution = for (_ <- 1 to 10) yield distTest.nextSample()
     val serviceDistribution = distTest.sample(numSlices)
-    val (generateTime, numTasks): (Long, Long) = time {
+    val (generateTime, stageId): (Long, Long) = time {
       runEmptySlices(spark.sparkContext, serviceDistribution.size, serviceDistribution, 1)
     }
 
     val endTime = System.currentTimeMillis()
 
-    (spark.createDataFrame(Seq(DistributedBlockingResult("distributed-blocking", timestamp,
+    (spark.createDataFrame(Seq(DistributedBlockingResult("distributed-blocking", stageId, timestamp,
       endTime, serviceDistribution.mkString(",")))), None)
 
   }
@@ -86,7 +87,7 @@ case class DistributedBlocking(input: Option[String] = None, output: Option[Stri
       val stopTime = java.lang.System.currentTimeMillis()
       println("    --- TASK $jobId.$taskId STOP: $stopTime")
       println("    === TASK $jobId.$taskId ELAPSED: ${stopTime-startTime}")
-      1
-    }.count()
+      TaskContext.get.stageId
+    }.collect()(0)
   }
 }
