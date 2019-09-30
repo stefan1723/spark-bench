@@ -12,8 +12,15 @@ object ExponentialDistribution extends DistributionDefaults{
   val name: String = "exponential"
 
   override def apply(m: Map[String, Any]): ExponentialDistribution = {
-    val mu = getOrThrow(m, "mu").asInstanceOf[Double]
-    val multiplier = getOrDefault(m, "multiplier", 1.0)
+    val mu = getOrThrow(m, "mu") match {
+      case mu: Int => mu.toDouble
+      case mu: Double => mu
+    }
+    val multiplier = optionallyGet(m, "multiplier") match {
+      case multiplier: Option[Int] => multiplier.getOrElse(1).toDouble
+      case multiplier: Option[Double] => multiplier.getOrElse(1.0)
+    }
+//    val multiplier = getOrDefault(m, "multiplier", 1.0)
     new ExponentialDistribution(mu, multiplier)
   }
 
