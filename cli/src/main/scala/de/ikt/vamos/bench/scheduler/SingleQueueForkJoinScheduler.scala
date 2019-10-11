@@ -15,10 +15,10 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
   val threadsInPool = 50
   // This values are object members to make it possible to call run and execute only a subset
   // of wanted repetitions. This is helpful to prevent out of memory errors on many repetitions.
-  var lastArrivalTime = 0L
-  var totalInterarrivalTime = 0.0
-  var interarrivalTime = 0.0
-  var shouldArriveTime = 0.0
+  var lastArrivalTime: Long = 0L
+  var totalInterarrivalTime: Long = 0
+  var interarrivalTime: Long = 0
+  var shouldArriveTime: Long = System.currentTimeMillis() + 10000
   var completedRepetitions = 0
   val forkJoinPool = new java.util.concurrent.ForkJoinPool(threadsInPool)
   var tasks: scala.collection.mutable.ListBuffer[ForkJoinTask[Seq[DataFrame]]] =
@@ -27,16 +27,19 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
 
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
     println(s"Should run SingleQueueForkJoinScheduler with ${suite.repeat} repetitions")
-
+    if (shouldArriveTime < System.currentTimeMillis()) {
+      println("Arrival time first task in history. Setting new time.")
+      shouldArriveTime = System.currentTimeMillis() + interarrivalTime
+    }
     val workloads = getWorkloadConfigs(suite)
 
     val numOfRepetitions = if(suite.repeatBuf == -1) suite.repeat else
       Math.min(suite.repeatBuf, suite.repeat - completedRepetitions)
     (0 until numOfRepetitions).foreach { i =>
-      lastArrivalTime = System.currentTimeMillis()
+//      lastArrivalTime = System.currentTimeMillis()
       val tmpRun = completedRepetitions
       val tmpinterarrivalTime = interarrivalTime
-      val tmpThisArrivalTime = lastArrivalTime
+      val tmpThisArrivalTime = shouldArriveTime //lastArrivalTime
       val dfSeqFromOneRun: ForkJoinTask[Seq[DataFrame]] = ForkJoinTask.adapt(
             new java.util.concurrent.Callable[Seq[DataFrame]]() {
         def call(): Seq[DataFrame] = {
@@ -51,8 +54,9 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
 
       forkJoinPool.execute(dfSeqFromOneRun)
       tasks += dfSeqFromOneRun
-      interarrivalTime = distribution.nextSample()
-      shouldArriveTime = lastArrivalTime + interarrivalTime
+      interarrivalTime = distribution.nextSample().toLong
+//      shouldArriveTime = lastArrivalTime + interarrivalTime
+      shouldArriveTime += interarrivalTime
       val sleepTime = (shouldArriveTime - System.currentTimeMillis()).toLong
       println(s"Should sleep ${sleepTime}ms, after handling job${i}")
       Thread.sleep(max(0L, sleepTime))

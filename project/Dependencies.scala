@@ -26,10 +26,10 @@ object Dependencies {
 
   // Libraries
   val sparkDeps = Seq(
-//    "org.apache.spark" %% "spark-core"  % sparkVersion % "provided"
-//    "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
-//    "org.apache.spark" %% "spark-sql"   % sparkVersion % "provided"
-//    "com.databricks"   %% "spark-avro"  % "4.0.0"
+    "org.apache.spark" %% "spark-core"  % sparkVersion % "provided",
+    "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
+    "org.apache.spark" %% "spark-sql"   % sparkVersion % "provided",
+    "com.databricks"   %% "spark-avro"  % "4.0.0"
   )
 
   val breezeDeps = Seq(
