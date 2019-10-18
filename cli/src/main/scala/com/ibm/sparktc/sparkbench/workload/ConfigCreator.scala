@@ -25,6 +25,7 @@ import com.ibm.sparktc.sparkbench.workload.exercise._
 import com.ibm.sparktc.sparkbench.workload.ml.{KMeansWorkload, LogisticRegressionWorkload}
 import com.ibm.sparktc.sparkbench.workload.sql.SQLWorkload
 import de.ikt.vamos.bench.workload.DistributedBlocking
+import main.scala.de.ikt.vamos.bench.datageneration.RandomAsciiGenerator
 
 object ConfigCreator {
 
@@ -39,7 +40,8 @@ object ConfigCreator {
     KMeansDataGen,
     LinearRegressionDataGen,
     GraphDataGen,
-    DistributedBlocking
+    DistributedBlocking,
+    RandomAsciiGenerator
   ).map(wk => wk.name -> wk).toMap
 
   private def loadCustom(name: String): WorkloadDefaults = {

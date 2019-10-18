@@ -29,7 +29,7 @@ import org.apache.spark.sql.types.{StructField, StructType, _}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 object RandomAsciiGenerator extends WorkloadDefaults {
-  val name = "data-generation-kmeans"
+  val name = "random-ascii-generator"
   override def apply(m: Map[String, Any]): RandomAsciiGenerator = new RandomAsciiGenerator(
     partitionSize = getOrThrow(m, "partition-size").asInstanceOf[Int],
     output = Some(getOrThrow(m, "output").asInstanceOf[String]),
@@ -48,18 +48,27 @@ case class RandomAsciiGenerator(partitionSize: Int,
   override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
 
-    val (generateTime, data): (Long, RDD[Seq[Byte]]) = time {
+    val (generateTime, data): (Long, RDD[Row]) = time {
       spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map(i => {
         val randomGenerator = ThreadLocalRandom.current()
-        Seq.fill[Byte](partitionSize)((randomGenerator.nextInt(256) - 128).toByte)
+        Row.fromSeq(Seq.fill[Byte](partitionSize)((randomGenerator.nextInt(256) - 128).toByte))
       })
     }
+    val dataSchema = StructType(
+      List(
+        StructField("bytes", ByteType, nullable = false)
+      )
+    )
+    val (saveTime, _) = time { writeToDisk(output.get, saveMode, spark.createDataFrame(data,
+      dataSchema),
+      spark) }
 
     val timeResultSchema = StructType(
       List(
         StructField("name", StringType, nullable = false),
         StructField("timestamp", LongType, nullable = false),
-        StructField("generate-time", LongType, nullable = true)
+        StructField("generate-time", LongType, nullable = true),
+        StructField("save-time", LongType, nullable = true)
       )
     )
 

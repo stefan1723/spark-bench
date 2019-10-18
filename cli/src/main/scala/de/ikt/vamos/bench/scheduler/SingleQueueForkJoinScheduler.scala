@@ -27,14 +27,15 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
 
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
     println(s"Should run SingleQueueForkJoinScheduler with ${suite.repeat} repetitions")
-    if (shouldArriveTime < System.currentTimeMillis()) {
-      println("Arrival time first task in history. Setting new time.")
-      shouldArriveTime = System.currentTimeMillis() + interarrivalTime
-    }
     val workloads = getWorkloadConfigs(suite)
 
     val numOfRepetitions = if(suite.repeatBuf == -1) suite.repeat else
       Math.min(suite.repeatBuf, suite.repeat - completedRepetitions)
+
+    if (shouldArriveTime < System.currentTimeMillis()) {
+      println("Arrival time first task in history. Setting new time.")
+      shouldArriveTime = System.currentTimeMillis() + interarrivalTime
+    }
     (0 until numOfRepetitions).foreach { i =>
 //      lastArrivalTime = System.currentTimeMillis()
       val tmpRun = completedRepetitions
