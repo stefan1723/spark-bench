@@ -17,13 +17,10 @@
 
 package main.scala.de.ikt.vamos.bench.datageneration
 
-import java.util.concurrent.ThreadLocalRandom
-
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import com.ibm.sparktc.sparkbench.utils.SaveModes
 import com.ibm.sparktc.sparkbench.utils.SparkFuncs.writeToDisk
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
-import org.apache.spark.mllib.util.KMeansDataGenerator
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{StructField, StructType, _}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
@@ -31,9 +28,8 @@ import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
 
-object RandomAsciiGenerator extends WorkloadDefaults {
-  val chars: IndexedSeq[Char] = ('a' to 'z') ++ ('A' to 'Z')
-  val name = "random-ascii-generator"
+object RandomByteGenerator extends WorkloadDefaults {
+  val name = "random-byte-generator"
   override def apply(m: Map[String, Any]): RandomAsciiGenerator = new RandomAsciiGenerator(
     partitionSize = getOrThrow(m, "partition-size").asInstanceOf[Int],
     output = Some(getOrThrow(m, "output").asInstanceOf[String]),
@@ -42,8 +38,7 @@ object RandomAsciiGenerator extends WorkloadDefaults {
   )
 }
 
-
-case class RandomAsciiGenerator(partitionSize: Int,
+case class RandomByteGenerator(partitionSize: Int,
                                 input: Option[String] = None,
                                 output: Option[String],
                                 saveMode: String,
@@ -54,26 +49,14 @@ case class RandomAsciiGenerator(partitionSize: Int,
     val timestamp = System.currentTimeMillis()
 
     val (generateTime, data) = time {
-//      spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map(i => {
-//        val x = Random.alphanumeric
-//        val tmp = new StringBuilder("")
-//        x take partitionSize foreach(x => tmp.append(x))
-//        tmp.toString
-////        val randomGenerator = ThreadLocalRandom.current()
-////        Row(Seq.fill[String](partitionSize)(RandomAsciiGenerator.chars(randomGenerator
-////          .nextInt(RandomAsciiGenerator.chars.size)).toString)
-////          .mkString(","))
-//      }).persist(StorageLevel.MEMORY_AND_DISK)
-
       spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
         i
-      }.map( i => (i,Array.fill[String](partitionSize)(RandomAsciiGenerator.chars(scala.util.Random
-        .nextInt(52) ).toString))
-      ).persist(StorageLevel.MEMORY_AND_DISK)
+      }.map( i => (i,Array.fill[Byte](partitionSize)((scala.util.Random.nextInt(256) - 128).toByte)) ).persist(StorageLevel.MEMORY_AND_DISK)
     }
     val dataSchema = StructType(
       List(
-        StructField("out", StringType, nullable = false)
+        StructField("id", IntegerType, nullable = false),
+        StructField("StringArray", StringType, nullable = false)
       )
     )
 
