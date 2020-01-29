@@ -56,7 +56,7 @@ case class PartitionAndSleepWorkload(input: Option[String] = None,
     yeah.collect()
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val (t, _) = doStuff(spark)
 
     val schema = StructType(

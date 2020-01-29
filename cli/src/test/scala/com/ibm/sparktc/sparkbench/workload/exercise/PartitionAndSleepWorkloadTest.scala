@@ -25,7 +25,7 @@ class PartitionAndSleepWorkloadTest extends FlatSpec with Matchers {
 
   "PartitionAndSleepWorkload" should "instantiate and run" in {
     val workload = PartitionAndSleepWorkload(Map("name" -> "timedsleep", "partitions" -> 10, "sleepms" -> 10))
-    val res = workload.doWorkload(None, spark).collect
+    val res = workload.doWorkload(None, spark, None).collect
     res.length shouldBe 1
     val row  = res(0)
     row.length shouldBe 3

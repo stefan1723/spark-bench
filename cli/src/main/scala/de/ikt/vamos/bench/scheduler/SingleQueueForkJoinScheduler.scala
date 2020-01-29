@@ -35,6 +35,9 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
     if (shouldArriveTime < System.currentTimeMillis()) {
       println("Arrival time first task in history. Setting new time.")
       shouldArriveTime = System.currentTimeMillis() + interarrivalTime
+      // This can add a small delay depending on the os and the utilization of the CPU.
+      // To reduce the delay active blocking could be used.
+      Thread.sleep(max(0L, System.currentTimeMillis() - shouldArriveTime))
     }
     (0 until numOfRepetitions).foreach { i =>
 //      lastArrivalTime = System.currentTimeMillis()

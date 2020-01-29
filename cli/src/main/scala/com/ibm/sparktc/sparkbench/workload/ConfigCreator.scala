@@ -26,6 +26,7 @@ import com.ibm.sparktc.sparkbench.workload.ml.{KMeansWorkload, LogisticRegressio
 import com.ibm.sparktc.sparkbench.workload.sql.SQLWorkload
 import de.ikt.vamos.bench.workload.DistributedBlocking
 import main.scala.de.ikt.vamos.bench.datageneration.{RandomAsciiGenerator, RandomByteGenerator}
+import main.scala.de.ikt.vamos.bench.workload.DistributedBlockingWithReading
 
 object ConfigCreator {
 
@@ -42,7 +43,8 @@ object ConfigCreator {
     GraphDataGen,
     DistributedBlocking,
     RandomAsciiGenerator,
-    RandomByteGenerator
+    RandomByteGenerator,
+    DistributedBlockingWithReading
   ).map(wk => wk.name -> wk).toMap
 
   private def loadCustom(name: String): WorkloadDefaults = {

@@ -49,6 +49,6 @@ class SQLWorkloadTest extends FlatSpec with Matchers with BeforeAndAfterAll {
       queryStr = "select `0` from input where `0` < -0.9",
       cache = false)
 
-    workload.doWorkload(None, spark)
+    workload.doWorkload(None, spark, None)
   }
 }

@@ -44,7 +44,7 @@ trait Workload {
     * supplies an inputDir, and returns the generated results and data DataFrame. The last can
     * be used to create a workload chain.
     */
-  def doWorkload(df: Option[DataFrame], sparkSession: SparkSession): (DataFrame, Option[RDD[_]])
+  def doWorkload(df: Option[DataFrame], sparkSession: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]])
 
   def run(spark: SparkSession, inDf: Option[DataFrame]): (DataFrame, Option[RDD[Any]]) = {
 
@@ -58,7 +58,7 @@ trait Workload {
       val rawDF = load(spark, in)
       reconcileSchema(rawDF)
     }
-    val (res, outData) = doWorkload(df, spark)
+    val (res, outData) = doWorkload(df, spark, None)
     (addConfToResults(res.coalesce(1), toMap), None)
   }
 

@@ -58,7 +58,7 @@ case class LinearRegressionDataGen (
                                       numPartitions: Int
                                    ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame,
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame,
     Option[RDD[_]]) = {
 
     val timestamp = System.currentTimeMillis()

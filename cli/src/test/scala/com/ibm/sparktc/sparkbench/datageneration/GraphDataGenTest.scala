@@ -48,7 +48,7 @@ class GraphDataGenTest extends FlatSpec with Matchers with BeforeAndAfterEach {
       "output" -> fileName
     )
     val generator = GraphDataGen(m)
-    generator.doWorkload(spark = SparkSessionProvider.spark)
+    generator.doWorkload(spark = SparkSessionProvider.spark, prevRDD = None)
     val res = GraphLoader.edgeListFile(SparkSessionProvider.spark.sparkContext, fileName)
 
     res.vertices.count() shouldBe m("vertices")

@@ -211,7 +211,7 @@ class SleepTest extends FlatSpec with Matchers {
     )
 
     val sleepWorkload: Sleep = Sleep(m)
-    val oneRow = sleepWorkload.doWorkload(None, SparkSessionProvider.spark).head
+    val oneRow = sleepWorkload.doWorkload(None, SparkSessionProvider.spark, None).head
     val runtime = oneRow.getAs[Long]("total_runtime")
     // Total runtime is measured in microseconds, so we first divide by 1,000,000
     val oneMillion = 1000000L

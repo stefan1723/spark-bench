@@ -85,6 +85,6 @@ class KMeansWorkloadTest extends FlatSpec with Matchers with BeforeAndAfterEach 
     val work = KMeansWorkload(conf)
     val df = load(spark, fileName)
     val ddf = work.reconcileSchema(df)
-    work.doWorkload(Some(ddf), spark)
+    work.doWorkload(Some(ddf), spark, None)
   }
 }

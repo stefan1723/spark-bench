@@ -38,7 +38,7 @@ case class CacheTest(input: Option[String],
                      saveMode: String = SaveModes.error,
                      sleepMs: Long) extends Workload {
 
-  def doWorkload(df: Option[DataFrame], spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  def doWorkload(df: Option[DataFrame], spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     import spark.implicits._
 
     val cached = df.getOrElse(Seq.empty[(Int)].toDF).cache

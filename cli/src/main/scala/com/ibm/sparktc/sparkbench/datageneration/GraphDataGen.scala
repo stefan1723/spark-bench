@@ -99,7 +99,7 @@ case class GraphDataGen (
                           numPartitions: Int = 0
                         ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (generateTime, graph) = time(GraphGenerators.logNormalGraph(spark.sparkContext, numVertices, numPartitions, mu, sigma))
     val (convertTime, out) = time(graph.edges.map(e => s"${e.srcId.toString} ${e.dstId}"))

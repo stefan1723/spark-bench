@@ -61,7 +61,7 @@ case class SparkPi(input: Option[String] = None,
     piApproximate
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (t, pi) = time(sparkPi(spark))
     (spark.createDataFrame(Seq(SparkPiResult("sparkpi", timestamp, t, pi))), None)

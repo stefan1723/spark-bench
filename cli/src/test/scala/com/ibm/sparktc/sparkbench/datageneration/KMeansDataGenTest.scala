@@ -53,7 +53,7 @@ class KMeansDataGenTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     val generator = KMeansDataGen(m)
 
-    generator.doWorkload(spark = SparkSessionProvider.spark)
+    generator.doWorkload(spark = SparkSessionProvider.spark, prevRDD = None)
 
     file = new File(csvFile)
 
@@ -90,7 +90,7 @@ class KMeansDataGenTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     val generator = KMeansDataGen(m)
 
-    generator.doWorkload(spark = spark)
+    generator.doWorkload(spark = spark, prevRDD = None)
 
     file = new File(orcFile)
 

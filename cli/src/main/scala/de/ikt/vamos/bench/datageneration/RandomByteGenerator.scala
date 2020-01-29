@@ -18,7 +18,7 @@
 package main.scala.de.ikt.vamos.bench.datageneration
 
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
-import com.ibm.sparktc.sparkbench.utils.SaveModes
+import com.ibm.sparktc.sparkbench.utils.{SaveModes, SparkBenchException}
 import com.ibm.sparktc.sparkbench.utils.SparkFuncs.writeToDisk
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import org.apache.spark.rdd.RDD
@@ -30,11 +30,12 @@ import scala.util.Random
 
 object RandomByteGenerator extends WorkloadDefaults {
   val name = "random-byte-generator"
-  override def apply(m: Map[String, Any]): RandomAsciiGenerator = new RandomAsciiGenerator(
+  override def apply(m: Map[String, Any]): RandomByteGenerator = new RandomByteGenerator(
     partitionSize = getOrThrow(m, "partition-size").asInstanceOf[Int],
     output = Some(getOrThrow(m, "output").asInstanceOf[String]),
     saveMode = getOrDefault[String](m, "save-mode", SaveModes.error),
-    numPartitions = getOrDefault[Int](m, "partitions", 1)
+    numPartitions = getOrDefault[Int](m, "partitions", 1),
+    byteValues = getOrDefault[String](m, "byte-values", "random")
   )
 }
 
@@ -42,16 +43,26 @@ case class RandomByteGenerator(partitionSize: Int,
                                 input: Option[String] = None,
                                 output: Option[String],
                                 saveMode: String,
-                                numPartitions: Int) extends Workload {
+                                numPartitions: Int,
+                                byteValues: String) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     import spark.implicits._
     val timestamp = System.currentTimeMillis()
 
+
     val (generateTime, data) = time {
-      spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
-        i
-      }.map( i => (i,Array.fill[Byte](partitionSize)((scala.util.Random.nextInt(256) - 128).toByte)) ).persist(StorageLevel.MEMORY_AND_DISK)
+      byteValues match {
+        case "random" => spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
+            i
+          }.map( i => (i,Array.fill[Byte](partitionSize)((scala.util.Random.nextInt(256) - 128).toByte))).persist(StorageLevel.MEMORY_AND_DISK)
+        case "zero" => spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
+          i
+        }.map( i => (i,Array.fill[Byte](partitionSize)(0.toByte))).persist(StorageLevel
+          .MEMORY_AND_DISK)
+        case _ => throw SparkBenchException("Type of byte-values can be zero or random.")
+      }
+
     }
     val dataSchema = StructType(
       List(
@@ -60,10 +71,14 @@ case class RandomByteGenerator(partitionSize: Int,
       )
     )
 
-//    val (saveTime, _) = time { writeToDisk(output.get, saveMode,
-//      spark.createDataFrame(data, dataSchema), spark) }
-    val (saveTime, _) = time { writeToDisk(output.get, saveMode,
-      data.toDF(), spark) }
+  //    val (saveTime, _) = time { writeToDisk(output.get, saveMode,
+  //      spark.createDataFrame(data, dataSchema), spark) }
+    val (saveTime, _) = time {
+      val outputstr = output.get
+//      if(outputstr.endsWith(".csv")) throw SparkBenchException("ByteArrays cannot be saved to CSV" +
+//        ". Please try outputting to Parquet instead.")
+      writeToDisk(output.get, saveMode, data.toDF(), spark)
+    }
 
     val timeResultSchema = StructType(
       List(
@@ -73,7 +88,7 @@ case class RandomByteGenerator(partitionSize: Int,
         StructField("save-time", LongType, nullable = true)
       )
     )
-//    data.collect()[0].toString()
+  //    data.collect()[0].toString()
 
     val timeList = spark.sparkContext.parallelize(Seq(Row("random-ascii-generator", timestamp,
       generateTime, saveTime)))

@@ -39,7 +39,7 @@ case class DistributedBlocking(input: Option[String] = None, output: Option[Stri
                                saveMode: String = SaveModes.error, distTest: DistributionBase,
                                numSlices: Int)
   extends Workload {
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame,
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame,
     Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
 //    val serviceDistribution = for (_ <- 1 to 10) yield distTest.nextSample()

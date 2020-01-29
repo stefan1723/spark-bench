@@ -49,7 +49,7 @@ case class RandomAsciiGenerator(partitionSize: Int,
                                 saveMode: String,
                                 numPartitions: Int) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     import spark.implicits._
     val timestamp = System.currentTimeMillis()
 
@@ -68,7 +68,7 @@ case class RandomAsciiGenerator(partitionSize: Int,
       spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
         i
       }.map( i => (i,Array.fill[String](partitionSize)(RandomAsciiGenerator.chars(scala.util.Random
-        .nextInt(52) ).toString))
+        .nextInt(52) ).toString).mkString(""))
       ).persist(StorageLevel.MEMORY_AND_DISK)
     }
     val dataSchema = StructType(

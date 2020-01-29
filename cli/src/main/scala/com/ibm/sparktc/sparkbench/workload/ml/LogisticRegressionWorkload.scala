@@ -86,7 +86,7 @@ case class LogisticRegressionWorkload(
     ds
   }
 
-  override def doWorkload(df: Option[DataFrame], spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame], spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val startTime = System.currentTimeMillis
     val (ltrainTime, d_train) = ld(s"${input.get}")(spark)
     val (ltestTime, d_test) = ld(s"$testFile")(spark)

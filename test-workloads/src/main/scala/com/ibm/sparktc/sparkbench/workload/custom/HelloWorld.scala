@@ -73,7 +73,7 @@ case class HelloString(
     doWorkload is an abstract method from Workload. It may or may not take input data, and it will
       output a one-row DataFrame made from the results case class we defined above.
   */
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     // Every workload returns a timestamp from the start of its doWorkload() method
     val timestamp = System.currentTimeMillis()
     /*

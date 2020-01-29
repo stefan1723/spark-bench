@@ -74,7 +74,7 @@ case class SQLWorkload (input: Option[String],
     }
   }
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (loadtime, df) = loadFromDisk(spark)
     val (querytime, res) = query(df, spark)

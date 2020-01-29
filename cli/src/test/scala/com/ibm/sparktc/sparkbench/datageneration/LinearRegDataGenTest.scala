@@ -53,7 +53,7 @@ class LinearRegDataGenTest extends FlatSpec with Matchers with BeforeAndAfterEac
 
     val generator = LinearRegressionDataGen(m)
 
-    generator.doWorkload(spark = SparkSessionProvider.spark)
+    generator.doWorkload(spark = SparkSessionProvider.spark, prevRDD = None)
 
 //    val fileList = file.listFiles().toList.filter(_.getName.startsWith("part"))
     val fileContents = load(SparkSessionProvider.spark, fileName, Some("parquet"))
@@ -72,7 +72,7 @@ class LinearRegDataGenTest extends FlatSpec with Matchers with BeforeAndAfterEac
         "output" -> csvFileName
       )
       val generator = LinearRegressionDataGen(m)
-      generator.doWorkload(spark = SparkSessionProvider.spark)
+      generator.doWorkload(spark = SparkSessionProvider.spark, prevRDD = None)
     }
   }
 

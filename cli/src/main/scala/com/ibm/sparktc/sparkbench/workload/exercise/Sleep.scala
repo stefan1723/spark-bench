@@ -148,7 +148,7 @@ case class Sleep(
                 distributionMax: Option[Long] = None
               ) extends Workload {
 
-  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession): (DataFrame, Option[RDD[_]]) = {
+  override def doWorkload(df: Option[DataFrame] = None, spark: SparkSession, prevRDD: Option[RDD[_]]): (DataFrame, Option[RDD[_]]) = {
     val timestamp = System.currentTimeMillis()
     val (t, _) = time {
       Thread.sleep(sleepMS)
