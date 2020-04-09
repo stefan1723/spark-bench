@@ -3,7 +3,7 @@ package de.ikt.vamos.bench.workload
 import com.ibm.sparktc.sparkbench.workload.{Workload, WorkloadDefaults}
 import com.ibm.sparktc.sparkbench.utils.GeneralFunctions._
 import com.ibm.sparktc.sparkbench.utils.SaveModes
-import de.ikt.vamos.bench.distribution.{DistributionBase, ExponentialDistribution}
+import de.ikt.vamos.bench.distribution.{ConstantDistribution, DistributionBase, ExponentialDistribution}
 import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -19,8 +19,12 @@ object DistributedBlocking extends WorkloadDefaults {
 //    val mu: Option[Double] = m.get("mu").asInstanceOf[Option[Double]]
 //    val multiplier: Double = m.get("multiplier").asInstanceOf[Option[Double]].getOrElse(1.0)
     val numSlices: Int = m.get("slices").asInstanceOf[Option[Int]].getOrElse(10)
+    val dist = distStr match {
+      case "constant" => ConstantDistribution.apply(m)
+      case "exponential" => ExponentialDistribution.apply(m)
+    }
     new DistributedBlocking(
-      distTest = ExponentialDistribution.apply(m), numSlices = numSlices
+      distTest = dist, numSlices = numSlices
       // Only for testing
     )
   }
