@@ -170,7 +170,7 @@ class LogSparkStatistics extends SparkListener {
   def getCsvLabelLine(): String = {
     "stageSubmissionTime,launchTime,finishTime,jobId,status,stageId,name,taskId,index,attempt," +
       "executorId," +
-      "duration,sojournTime,waitingTime," +
+      "duration,durationNs,sojournTime,waitingTime," +
       "taskLocality,executorDeserializeTime,executorRunTime,executorCpuTime," +
       "executorDeserializeCpuTime,resultSize,gettingResultTime," +
       "jvmGcTime,resultSerializationTime,memoryBytesSpilled,diskBytesSpilled," +

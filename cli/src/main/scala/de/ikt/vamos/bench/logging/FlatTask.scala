@@ -22,7 +22,7 @@ case class ExtendedFlatTask(stageSubmissionTime: Long, launchTime:Long, finishTi
                             jobId: Long,
                             status: String,
                             stageId:Long, name: String, taskId:Long,
-                            taskIndex:Long, attempt: Int, executorId: String, duration: Double,
+                            taskIndex:Long, attempt: Int, executorId: String, duration: Double, durationNs: Double,
                             sojournTime: Double, waitingTime:Double, taskLocality: String,
                             executorDeserializationTime:Double, executorRunTime:Double,
                             executorCpuTime: Double, executorDeserializeCpuTime: Double,
@@ -60,6 +60,7 @@ object ExtendedFlatTask {
       stage.stageInfo.fold(-1)(_.attemptNumber()),
       task.taskInfo.fold("-1")(_.executorId),
       task.taskInfo.fold(0L)(_.duration),
+      task.taskInfo.fold(0L)(_.durationNs),
       stage.stageInfo.fold(0L)(_.completionTime.getOrElse(0L)) - task.submissionTime.getOrElse(0L),
       task.taskInfo.fold(0L)(_.launchTime) - task.submissionTime.getOrElse(0L),
       task.taskInfo.fold("Not set")(_.taskLocality.toString),
@@ -99,7 +100,7 @@ object ExtendedFlatTask {
 }
 
 // More detailed FlatTask class
-case class FlatTaskDetail(stageId:Long, taskId:Long, duration:Long, executorId:String, finishTime:Long, gettingResultTime:Long, id:String, index:Int,
+case class FlatTaskDetail(stageId:Long, taskId:Long, duration:Long, durationNs:Long, executorId:String, finishTime:Long, gettingResultTime:Long, id:String, index:Int,
                           launchTime:Long, taskLocality:String, diskBytesSpilled:Long, executorCpuTime:Long, executorDeserializeCpuTime:Long,
                           executorDeserializeTime:Long, executorRunTime:Long, memoryBytesSpilled:Long, peakExecutionMemory:Long, resultSerializationTime:Long, resultSize:Long)
 
