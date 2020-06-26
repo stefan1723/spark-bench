@@ -22,7 +22,7 @@ class LogSparkStatistics extends SparkListener {
   override def onJobStart(jobStart: SparkListenerJobStart) {
     print(jobStart.jobId)
     val tmpJob = LogJob(jobStart.jobId)
-    tmpJob.submissionTime = Some(jobStart.time)
+    tmpJob.submissionTime = Option(jobStart.time)
     tmpJob.numStages = jobStart.stageInfos.size
     tmpJob.stageIds = jobStart.stageIds
     tmpJob.stageInfos = jobStart.stageInfos
@@ -34,7 +34,7 @@ class LogSparkStatistics extends SparkListener {
       }
       else {
         val tmpStage = LogStage(stageId)
-        tmpStage.job = Some(tmpJob)
+        tmpStage.job = Option(tmpJob)
         stageIdToStage += tmpStage.stageId -> tmpStage
       }
     }
@@ -47,7 +47,7 @@ class LogSparkStatistics extends SparkListener {
       println("Stage id unknown in onStageCompleted. Should be set at this position.")
     else {
       val stage = currStage.get
-      stage.stageInfo = Some(stageCompleted.stageInfo)
+      stage.stageInfo = Option(stageCompleted.stageInfo)
     }
   }
 
@@ -55,26 +55,28 @@ class LogSparkStatistics extends SparkListener {
     val taskInfo = taskEnd.taskInfo
     val currStage = stageIdToStage.get(taskEnd.stageId)
     if(currStage.isEmpty)
-      println("Stage id unknown in onTaskEnd. Should be set at this position.")
+      println(s"Stage id ${taskEnd.stageId} unknown in onTaskEnd. Should be set at this position. ${taskEnd.stageAttemptId}|" +
+        s"${taskEnd.taskInfo.attemptNumber} ${taskInfo.index} ${taskInfo.speculative} ${taskInfo.taskId}")
     else {
       val stage = currStage.get
       val logTask = LogTask(taskEnd.stageId)
-      logTask.taskInfo = Some(taskEnd.taskInfo)
-      logTask.taskMetrics = Some(taskEnd.taskMetrics)
+      logTask.taskInfo = Option(taskEnd.taskInfo)
+      logTask.taskMetrics = Option(taskEnd.taskMetrics)
       logTask.submissionTime = stage.stageInfo.get.submissionTime
+      logTask.endReason = s""""${taskEnd.reason.toString}""""
       //stage.tasks += logTask.taskInfo.get.taskId -> logTask
-      stage.tasks += logTask.taskInfo.get.index -> logTask
+      stage.tasks += logTask
     }
   }
 
   override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
     val job = jobIdsToJobs.get(jobEnd.jobId)
-    job.get.time = Some(jobEnd.time)
+    job.get.time = Option(jobEnd.time)
     for(stageId <- job.get.stageIds) {
       val stage = stageIdToStage.get(stageId)
       if(stage.nonEmpty) {
-        for((taskIndex, task) <- stage.get.tasks) {
-          task.jobEnd = Some(jobEnd.time)
+        for(task <- stage.get.tasks) {
+          task.jobEnd = Option(jobEnd.time)
           stage.get.job = job
         }
       }
@@ -84,14 +86,14 @@ class LogSparkStatistics extends SparkListener {
   override def onStageSubmitted(stageSubmitted: SparkListenerStageSubmitted): Unit = {
     val currStage = stageIdToStage.get(stageSubmitted.stageInfo.stageId)
     if(currStage.isEmpty) {
-      println("Stage id unknown in onStageSubmitted. Should be set at this position.")
+      println(s"Stage id ${stageSubmitted.stageInfo.stageId} unknown in onStageSubmitted. Should be set at this position.")
       val stage = LogStage(stageSubmitted.stageInfo.stageId)
-      stage.stageInfo = Some(stageSubmitted.stageInfo)
+      stage.stageInfo = Option(stageSubmitted.stageInfo)
       this.stageIdToStage += stage.stageId -> stage
     }
     else {
       val stage = currStage.get
-      stage.stageInfo = Some(stageSubmitted.stageInfo)
+      stage.stageInfo = Option(stageSubmitted.stageInfo)
     }
   }
 
@@ -104,9 +106,9 @@ class LogSparkStatistics extends SparkListener {
   def getTaskMetrics(): scala.collection.mutable.Seq[FlatTask] = {
     var tasks:scala.collection.mutable.Seq[FlatTask] = scala.collection.mutable.Seq[FlatTask]()
     for((stageId,v) <- stageIdToStage) {
-      for((taskIndex,task) <- v.tasks) {
+      for(task <- v.tasks) {
         if(task.taskInfo.nonEmpty) {
-          tasks :+= FlatTask(taskIndex, task.taskInfo.get.taskId, stageId, task.taskInfo.get.host,
+          tasks :+= FlatTask(task.index, task.taskInfo.get.taskId, stageId, task.taskInfo.get.host,
             task.taskInfo.get.taskLocality == TaskLocality.PROCESS_LOCAL,
             task.jobEnd.getOrElse(0L) - task.submissionTime.getOrElse(0L),
             task.taskInfo.get.launchTime - task.submissionTime.getOrElse(0L),
@@ -125,7 +127,7 @@ class LogSparkStatistics extends SparkListener {
   }
 
   def addExecutionTimeAccumulator(executionTimeAccumulator: ExecutionTimeAccumulator): Unit = {
-    this.executionTimeAccumulator = Some(executionTimeAccumulator)
+    this.executionTimeAccumulator = Option(executionTimeAccumulator)
   }
 
   def getCsvMetrics() = {
@@ -134,7 +136,7 @@ class LogSparkStatistics extends SparkListener {
     val executionStats = this.executionTimeAccumulator.fold(Map.empty[String, Long])(_.value.stats)
     var tasks:scala.collection.mutable.Seq[FlatTask] = scala.collection.mutable.Seq[FlatTask]()
     for((stageId,v) <- stageIdToStage) {
-      for((taskIndex,task) <- v.tasks) {
+      for(task <- v.tasks) {
         val runTime = executionStats.getOrElse(task.taskInfo.fold(-1L)(_.taskId).toString, 0L)
         if(task.taskInfo.nonEmpty) {
           val extendedTask = ExtendedFlatTask(task, v, runTime)
@@ -151,7 +153,7 @@ class LogSparkStatistics extends SparkListener {
     val executionStats = this.executionTimeAccumulator.fold(Map.empty[String, Long])(_.value.stats)
     //    var tasks:scala.collection.mutable.Seq[FlatTask] = scala.collection.mutable.Seq[FlatTask]()
     for((stageId,v) <- stageIdToStage) {
-      for((taskIndex,task) <- v.tasks) {
+      for(task <- v.tasks) {
         val runTime = executionStats.getOrElse(task.taskInfo.fold(-1L)(_.taskId).toString, 0L)
         if(task.taskInfo.nonEmpty) {
           val extendedTask = ExtendedFlatTask(task, v, runTime)
@@ -163,7 +165,7 @@ class LogSparkStatistics extends SparkListener {
 
   def getExecutionTimeAccumulator(): ExecutionTimeAccumulator = {
     if (this.executionTimeAccumulator.isEmpty)
-      this.executionTimeAccumulator = Some(ExecutionTimeAccumulator(ExecutionTimeStat()))
+      this.executionTimeAccumulator = Option(ExecutionTimeAccumulator(ExecutionTimeStat()))
     this.executionTimeAccumulator.get
   }
 
@@ -178,7 +180,7 @@ class LogSparkStatistics extends SparkListener {
       "bytesWritten, recordsWritten,shuffleRemoteBlocksFetched,shuffleLocalBlocksFetched," +
       "shuffleFetchWaitTime, remoteBytesRead,shuffleRemoteBytesReadToDisk,shuffleLocalBytesRead," +
       "shuffleRecordsRead, shuffleBytesWritten,shuffleWriteTime,shuffleRecordsWritten," +
-      "stageCompletionTime,measuredRunTime\n"
+      "stageCompletionTime,measuredRunTime,taskEndReason\n"
   }
 
   override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {

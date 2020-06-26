@@ -19,8 +19,8 @@ import sbt._
 
 object Dependencies {
   // Versions
-//  lazy val sparkVersion = "2.4.0"
-  lazy val sparkVersion = "3.0.0-preview2"
+  lazy val sparkVersion = "2.4.0"
+//   lazy val sparkVersion = "3.0.0-preview2"
   lazy val scalacheckVersion = "1.14.0"
   lazy val junitVersion = "4.12"
   lazy val scalatestVersion = "3.2.0-SNAP10"
@@ -41,7 +41,8 @@ object Dependencies {
   val jsonCreation = Seq(
    "com.softwaremill.sttp" %% "json4s" % "1.1.8",
    "com.softwaremill.sttp" %% "core" % "1.1.8",
-   "org.json4s" %% "json4s-native" % "3.5.3"
+//    "org.json4s" %% "json4s-native" % "3.5.3"
+//    "org.json4s" %% "json4s-native" % "3.7.0-M4"
   )
 
   val typesafe = Seq(

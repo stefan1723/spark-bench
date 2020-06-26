@@ -54,9 +54,12 @@ trait Workload {
         "Please use \"errorifexists\", \"ignore\", or \"overwrite\" instead.")
     }
 
-    val df = input.map { in =>
+    var df = input.map { in =>
       val rawDF = load(spark, in)
       reconcileSchema(rawDF)
+    }
+    if(df.isEmpty && inDf.nonEmpty) {
+      df = Some(reconcileSchema(inDf.get))
     }
     val (res, outData) = doWorkload(df, spark, None)
     (addConfToResults(res.coalesce(1), toMap), None)

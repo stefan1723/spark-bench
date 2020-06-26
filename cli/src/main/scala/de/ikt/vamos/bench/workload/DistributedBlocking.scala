@@ -6,7 +6,8 @@ import com.ibm.sparktc.sparkbench.utils.SaveModes
 import de.ikt.vamos.bench.distribution.{ConstantDistribution, DistributionBase, ExponentialDistribution}
 import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.math.random
 
@@ -27,6 +28,18 @@ object DistributedBlocking extends WorkloadDefaults {
       distTest = dist, numSlices = numSlices
       // Only for testing
     )
+  }
+
+  def waitAndGetStageId(taskId: Int, serviceTimes: IndexedSeq[Double]): Int = {
+    val jobLength = serviceTimes(taskId)
+    val startTime = java.lang.System.currentTimeMillis()
+    val targetStopTime = startTime + jobLength
+    while (java.lang.System.currentTimeMillis() < targetStopTime) {
+      val x = random * 2 - 1
+      val y = random * 2 - 1
+    }
+    val stopTime = java.lang.System.currentTimeMillis()
+    TaskContext.get.stageId
   }
 }
 case class DistributedBlockingResult(
@@ -49,7 +62,7 @@ case class DistributedBlocking(input: Option[String] = None, output: Option[Stri
 //    val serviceDistribution = for (_ <- 1 to 10) yield distTest.nextSample()
     val serviceDistribution = distTest.sample(numSlices)
     val (generateTime, stageId): (Long, Long) = time {
-      runEmptySlices(spark.sparkContext, serviceDistribution.size, serviceDistribution, 1)
+      runEmptySlices(spark, serviceDistribution.size, serviceDistribution, 1, df)
     }
 
     val endTime = System.currentTimeMillis()
@@ -74,24 +87,17 @@ case class DistributedBlocking(input: Option[String] = None, output: Option[Stri
     *        this is parallelized I ran into the problem that in some cases we would be passing
     *        identical RNGs to the workers, and generating identical service times.
     */
-  def runEmptySlices(spark:SparkContext, slices: Int, serviceTimes: IndexedSeq[Double], jobId: Int)
+  def runEmptySlices(spark:SparkSession, slices: Int, serviceTimes: IndexedSeq[Double], jobId: Int, df: Option[DataFrame] = None)
   : Long = {
-    //println("serviceTimes = "+serviceTimes)
-    spark.parallelize(1 to slices, slices).map { i =>
-      val taskId = i
-      val jobLength = serviceTimes(i-1)
-      val startTime = java.lang.System.currentTimeMillis()
-      val targetStopTime = startTime + jobLength
-      println(s"    +++ TASK $jobId.$taskId START: $startTime")
-      while (java.lang.System.currentTimeMillis() < targetStopTime) {
-        val x = random * 2 - 1
-        val y = random * 2 - 1
-      }
-
-      val stopTime = java.lang.System.currentTimeMillis()
-      println("    --- TASK $jobId.$taskId STOP: $stopTime")
-      println("    === TASK $jobId.$taskId ELAPSED: ${stopTime-startTime}")
-      TaskContext.get.stageId
-    }.collect()(0)
+    df match {
+      case None => spark.sparkContext.parallelize(0 until slices, slices).map { i =>
+          DistributedBlocking.waitAndGetStageId(i, serviceTimes)
+        }.collect()(0)
+      case Some(x) => x.rdd.map{ vals: Row =>
+          DistributedBlocking.waitAndGetStageId(vals(0).asInstanceOf[Int], serviceTimes)
+        }.collect()(0)
+    }
   }
+
+
 }

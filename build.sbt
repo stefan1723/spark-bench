@@ -22,8 +22,8 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.sys.process._
 
 logLevel := Level.Error
-// ThisBuild / scalaVersion := "2.11.12"
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := "2.11.12"
+//ThisBuild / scalaVersion := "2.12.8"
 
 /*
     **********************************************************************************

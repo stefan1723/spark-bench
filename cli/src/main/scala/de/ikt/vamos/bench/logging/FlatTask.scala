@@ -37,7 +37,7 @@ case class ExtendedFlatTask(stageSubmissionTime: Long, launchTime:Long, finishTi
                             shuffleLocalBytesRead:Long, shuffleRecordsRead: Long,
                             shuffleBytesWritten: Long, shuffleWriteTime:Long,
                             shuffleRecordsWritten: Long,stageCompletionTime: Double,
-                            measuredRunTime: Long) {
+                            measuredRunTime: Long, endReason: String) {
 
   def toJson(): String = {
     this.productIterator.map{
@@ -60,7 +60,7 @@ object ExtendedFlatTask {
       stage.stageInfo.fold(-1)(_.attemptNumber()),
       task.taskInfo.fold("-1")(_.executorId),
       task.taskInfo.fold(0L)(_.duration),
-      task.taskInfo.fold(0L)(_.durationNs),
+      task.taskInfo.fold(0L)(_.duration),
       stage.stageInfo.fold(0L)(_.completionTime.getOrElse(0L)) - task.submissionTime.getOrElse(0L),
       task.taskInfo.fold(0L)(_.launchTime) - task.submissionTime.getOrElse(0L),
       task.taskInfo.fold("Not set")(_.taskLocality.toString),
@@ -94,7 +94,8 @@ object ExtendedFlatTask {
       task.taskMetrics.fold(0L)(_.shuffleWriteMetrics.writeTime),
       task.taskMetrics.fold(0L)(_.shuffleWriteMetrics.recordsWritten),
       stage.stageInfo.fold(-1.0)(_.completionTime.fold(-1.0)(_.toDouble)),
-      runTime
+      runTime,
+      task.endReason
     )
   }
 }
@@ -116,16 +117,19 @@ case class LogJob(jobId:Int) extends Serializable {
 }
 
 case class LogTask(stageId: Int) extends Serializable {
+  var index: Int = -1
   var taskInfo: Option[TaskInfo] = None
   var taskMetrics: Option[TaskMetrics] = None
   var submissionTime: Option[Long] = None // Represents the time the stage is submitted
   var jobEnd: Option[Long] = None
+  var endReason: String = ""
   override def toString:String = { "LogTask("+taskInfo.getOrElse("None")+", "+taskMetrics.getOrElse("None")+", "+submissionTime.getOrElse("None")+", "+jobEnd.getOrElse("None")+")" }
 }
 
 case class LogStage(stageId: Int) extends Serializable {
   var stageInfo: Option[StageInfo] = None
   var job: Option[LogJob] = None
-  var tasks: scala.collection.mutable.Map[Int, LogTask] = scala.collection.mutable.Map.empty[Int, LogTask]
+//  var tasks: scala.collection.mutable.Map[Int, LogTask] = scala.collection.mutable.Map.empty[Int, LogTask]
+  var tasks: scala.collection.mutable.ListBuffer[LogTask] = scala.collection.mutable.ListBuffer.empty[LogTask]
   override def toString:String = { "LogStage("+stageInfo.getOrElse("None")+", "+job.getOrElse("None")+", "+tasks+")" }
 }

@@ -21,22 +21,22 @@ trait SchedulerBase {
 
   def isCompleted: Boolean = completed
 
-  protected def runParallel(workloadConfigs: Seq[Workload], spark: SparkSession):
+  protected def runParallel(workloadConfigs: Seq[Workload], spark: SparkSession, inDf: Option[DataFrame]):
   Seq[(DataFrame, Option[RDD[_]])] = {
     val confSeqPar = workloadConfigs.par
     confSeqPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(confSeqPar.size))
-    confSeqPar.map(_.run(spark, None)).seq
+    confSeqPar.map(_.run(spark, inDf=inDf)).seq
   }
 
-  protected def runSerially(workloadConfigs: Seq[Workload], spark: SparkSession):
+  protected def runSerially(workloadConfigs: Seq[Workload], spark: SparkSession, inDf: Option[DataFrame]):
   Seq[(DataFrame, Option[RDD[_]])] = {
-    workloadConfigs.map(_.run(spark, None))
+    workloadConfigs.map(_.run(spark, inDf=inDf))
   }
 
   protected def runWorkloads(parallel: Boolean, workloads: Seq[Workload],
-                             spark: SparkSession): Seq[(DataFrame, Option[RDD[_]])] = {
-    if (parallel) runParallel(workloads, spark)
-    else runSerially(workloads, spark)
+                             spark: SparkSession, inDf: Option[DataFrame] = None): Seq[(DataFrame, Option[RDD[_]])] = {
+    if (parallel) runParallel(workloads, spark, inDf=inDf)
+    else runSerially(workloads, spark, inDf=inDf)
   }
 }
 

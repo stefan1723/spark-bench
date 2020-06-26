@@ -1,27 +1,149 @@
 package main.scala.de.ikt.vamos.bench.scheduler
 
+import java.util.concurrent.{ForkJoinTask, TimeUnit}
+
+import breeze.linalg.max
+import com.ibm.sparktc.sparkbench.utils.SparkBenchException
 import com.ibm.sparktc.sparkbench.workload.{Suite, Workload}
 import de.ikt.vamos.bench.distribution.DistributionBase
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.parallel.ForkJoinTaskSupport
 
 class SplitMergeScheduler(val distribution: DistributionBase) extends SchedulerBase {
+  val MAX_NUMBER_OF_DATA_CREATION_TRIES = 5
+  // Number of milliseconds to create one slice.
+  // This is necessary to create the same number of slices on each executor.
+  val TIME_TO_CREATE_EMPTY_SLICE = 100
+  val threadsInPool = 1
+  // This values are object members to make it possible to call run and execute only a subset
+  // of wanted repetitions. This is helpful to prevent out of memory errors on many repetitions.
+  var lastArrivalTime: Long = 0L
+  var totalInterarrivalTime: Long = 0
+  var interarrivalTime: Long = 0
+  var shouldArriveTime: Long = System.currentTimeMillis() + 10000
+  var completedRepetitions = 0
+  val forkJoinPool = new java.util.concurrent.ForkJoinPool(threadsInPool)
+  var tasks: scala.collection.mutable.ListBuffer[ForkJoinTask[Seq[DataFrame]]] =
+    scala.collection.mutable.ListBuffer.empty[ForkJoinTask[Seq[DataFrame]]]
+
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
-    completed = true
-    println(s"Should run SplitMergeScheduler ${distribution.toString}")
-    println(s"WARNING: This scheduler is not yet implemented!")
+    println(s"Should run SplitMergeScheduler with ${suite.repeat} repetitions")
+    val schema = new StructType()
+      .add(StructField("id", IntegerType, true)).add(StructField("hostname", StringType, true))
     val workloads = getWorkloadConfigs(suite)
-    (0 until suite.repeat).flatMap { i =>
-      // This will produce one DataFrame of one row for each workload in the sequence.
-      // We're going to produce one coherent DF later from these
-      val dfSeqFromOneRun: Seq[(DataFrame, Option[RDD[_]])] = {
-        runWorkloads(suite.parallel, workloads, spark)
-      }
-      // Indicate which run of this suite this was.
-      dfSeqFromOneRun.map(_._1).map(res => res.withColumn("run", lit(i)))
+    val numOfRepetitions = if(suite.repeatBuf == -1) suite.repeat else
+      Math.min(suite.repeatBuf, suite.repeat - completedRepetitions)
+    var inDf: Option[DataFrame] = None
+    if (suite.forceDistr) {
+      val rddEachExecutor = createDataFrameForLocality(spark, suite.slices)
+      inDf = Some(spark.createDataFrame(rddEachExecutor, schema ))
     }
+    if (shouldArriveTime < System.currentTimeMillis()) {
+      println("Arrival time first task in history. Setting new time.")
+      shouldArriveTime = System.currentTimeMillis() + interarrivalTime
+      // This can add a small delay depending on the os and the utilization of the CPU.
+      // To reduce the delay active blocking could be used.
+      Thread.sleep(max(0L, System.currentTimeMillis() - shouldArriveTime))
+    }
+    (0 until numOfRepetitions).foreach { i =>
+      //      lastArrivalTime = System.currentTimeMillis()
+      val tmpRun = completedRepetitions
+      val tmpinterarrivalTime = interarrivalTime
+      val tmpThisArrivalTime = shouldArriveTime //lastArrivalTime
+    val dfSeqFromOneRun: ForkJoinTask[Seq[DataFrame]] = ForkJoinTask.adapt(
+      new java.util.concurrent.Callable[Seq[DataFrame]]() {
+        def call(): Seq[DataFrame] = {
+          val runNum = tmpRun
+          val thisInterarrivalTime = tmpinterarrivalTime
+          val thisArrivalTime = tmpThisArrivalTime
+          runWorkloads(suite.parallel, workloads, spark, inDf = inDf ).map(_._1).map(res => res.withColumn
+          ("run", lit(runNum)).withColumn("interarrivalTime", lit(thisInterarrivalTime))
+            .withColumn("shouldArrive", lit(thisArrivalTime)))
+        }
+      })
+
+      forkJoinPool.execute(dfSeqFromOneRun)
+      tasks += dfSeqFromOneRun
+      interarrivalTime = distribution.nextSample().toLong
+      //      shouldArriveTime = lastArrivalTime + interarrivalTime
+      shouldArriveTime += interarrivalTime
+      val sleepTime = (shouldArriveTime - System.currentTimeMillis()).toLong
+      println(s"Should sleep ${sleepTime}ms, after handling job$i")
+      Thread.sleep(max(0L, sleepTime))
+      // Indicate which run of this suite this was.
+      //      dfSeqFromOneRun.map(_._1).map(res => res.withColumn("run", lit(i)))
+      completedRepetitions += 1
+    }
+
+    getResultsOfFinishedTasks(suite)
+  }
+
+  def createDataFrameForLocality(spark: SparkSession, numOfTasks: Int): RDD[Row] = {
+    var numOfTries = 0
+    val numOfInstances = spark.conf.get("spark.executor.instances").toInt
+    val tasksPerExecutor = numOfTasks / numOfInstances
+    while (numOfTries < MAX_NUMBER_OF_DATA_CREATION_TRIES) {
+      val rdd = spark.sparkContext.parallelize(0 until numOfTasks, numOfTasks).map(i => {
+        val startTime = java.lang.System.currentTimeMillis()
+        val targetStopTime = startTime + 100 * (numOfTries +1) // TIME_TO_CREATE_EMPTY_SLICE
+        var x = 0
+        val hostname = java.net.InetAddress.getLocalHost.getHostName
+        while (java.lang.System.currentTimeMillis() < targetStopTime) {
+          x += 1
+        }
+        Row(i, hostname)
+      })
+      val hostnames = rdd.persist.collect
+      val slicesPerHost = hostnames.groupBy(_(1)).mapValues(_.length)
+      // print(hostnames)
+      if (slicesPerHost.values.exists(_ != tasksPerExecutor)) {
+        rdd.unpersist()
+        numOfTries += 1
+      } else
+        return rdd
+    }
+    throw SparkBenchException(s"Could not create data on all nodes after $numOfTries tries.")
+  }
+
+  /**
+    * Returns the results of already finished jobs if there are unscheduled jobs left.
+    * This means that scheduled jobs which did not already finish are ignored and the
+    * result must be fetched later.
+    * If all jobs are scheduled this function blocks until all they are finished and
+    * returns the result.
+    * @param suite
+    * @return
+    */
+  def getResultsOfFinishedTasks(suite: Suite): Seq[DataFrame] = {
+    var outRows = scala.collection.mutable.ListBuffer.empty[Seq[DataFrame]]
+    if (suite.repeatBuf == -1 || completedRepetitions >= suite.repeat) {
+      forkJoinPool.awaitQuiescence(0, TimeUnit.DAYS)
+      for (task <- tasks) {
+        outRows += task.get()
+      }
+      completed = true
+    } else {
+      // TODO: Move this functionality in the base class of schedulers. (Only for schedulers
+      //  with arrival times)
+      // Removes some of the already finished tasks to reduce the used memory. It's not
+      // guaranteed that all finished tasks are removed because this queuing teqchnique allows
+      // finishing not in placed.
+      // At this point there is no waiting until all tasks in queue have finished because
+      // this could cause wrong arrival times when running the next repetitions.
+      var unfinishedTaskFound = false
+      while (!unfinishedTaskFound && tasks.nonEmpty) {
+        val task = tasks.head
+        if (task.isDone) {
+          outRows += task.get()
+          tasks.remove(0)
+        } else
+          unfinishedTaskFound = true
+      }
+    }
+    outRows.map(res => res.head)
   }
 }

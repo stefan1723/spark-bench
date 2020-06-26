@@ -69,6 +69,19 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
       completedRepetitions += 1
     }
 
+    getResultsOfFinishedTasks(suite)
+  }
+
+  /**
+    * Returns the results of already finished jobs if there are unscheduled jobs left.
+    * This means that scheduled jobs which did not already finish are ignored and the
+    * result must be fetched later.
+    * If all jobs are scheduled this function blocks until all they are finished and
+    * returns the result.
+    * @param suite
+    * @return
+    */
+  def getResultsOfFinishedTasks(suite: Suite): Seq[DataFrame] = {
     var outRows = scala.collection.mutable.ListBuffer.empty[Seq[DataFrame]]
     if (suite.repeatBuf == -1 || completedRepetitions >= suite.repeat) {
       forkJoinPool.awaitQuiescence(0, TimeUnit.DAYS)
@@ -77,7 +90,7 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
       }
       completed = true
     } else {
-      // TODO: Move this functionallity in the base class of schedulers. (Only for schedulers
+      // TODO: Move this functionality in the base class of schedulers. (Only for schedulers
       //  with arrival times)
       // Removes some of the already finished tasks to reduce the used memory. It's not
       // guaranteed that all finished tasks are removed because this queuing teqchnique allows
@@ -96,4 +109,6 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
     }
     outRows.toSeq.map(res => res.head)
   }
+
+
 }

@@ -60,6 +60,8 @@ object Configurator {
     val descr: Option[String] = Try(config.getString("descr")).toOption
     val runMode: String = Try(config.getString("run-mode")).getOrElse("serial")
     val parallel: Boolean = Try(config.getBoolean("parallel")).getOrElse(false)
+    val forceDistr: Boolean = Try(config.getBoolean("force-distribution")).getOrElse(false)
+    val slices: Int = Try(config.getInt("slices")).getOrElse(0)
     val repeat: Int = Try(config.getInt("repeat")).getOrElse(1)
     val repeatBuf: Int = Try(config.getInt("repeatBuf")).getOrElse(-1)
     val output: Option[String] = Try(config.getString("benchmark-output")).toOption
@@ -70,7 +72,7 @@ object Configurator {
     val scheduler = SchedulerBase.apply(runMode, Try{config.getConfig("arrival-distribution")}
   .getOrElse(ConfigFactory.empty()).root().unwrapped().asScala.toMap)
 
-    Suite.build(workloads, descr, repeat, repeatBuf, parallel, scheduler, saveMode, output)
+    Suite.build(workloads, descr, repeat, repeatBuf, parallel, scheduler, saveMode, slices, forceDistr, output)
   }
 
 //  def parseArrivalProcess(config: Option[Config]): Option[ArrivalProcess] = {
