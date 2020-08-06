@@ -20,7 +20,7 @@ class LogSparkStatistics extends SparkListener {
   def getJobStages() = { scala.collection.immutable.Map() ++ jobIdToStageIds }
 
   override def onJobStart(jobStart: SparkListenerJobStart) {
-    print(jobStart.jobId)
+//    println(jobStart.jobId)
     val tmpJob = LogJob(jobStart.jobId)
     tmpJob.submissionTime = Option(jobStart.time)
     tmpJob.numStages = jobStart.stageInfos.size

@@ -3,11 +3,13 @@ package main.scala.de.ikt.vamos.bench.scheduler
 import java.util.concurrent.{ForkJoinTask, TimeUnit}
 
 import breeze.linalg.max
+import com.ibm.sparktc.sparkbench.utils.SparkBenchException
 import com.ibm.sparktc.sparkbench.workload.{Suite, Workload}
 import de.ikt.vamos.bench.distribution.DistributionBase
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.parallel.ForkJoinTaskSupport
 
@@ -23,9 +25,16 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
   val forkJoinPool = new java.util.concurrent.ForkJoinPool(threadsInPool)
   var tasks: scala.collection.mutable.ListBuffer[ForkJoinTask[Seq[DataFrame]]] =
     scala.collection.mutable.ListBuffer.empty[ForkJoinTask[Seq[DataFrame]]]
+  val MAX_NUMBER_OF_DATA_CREATION_TRIES = 5
+  // Number of milliseconds to create one slice.
+  // This is necessary to create the same number of slices on each executor.
+  val TIME_TO_CREATE_EMPTY_SLICE = 100
+  val DATA_SCHEMA = new StructType()
+    .add(StructField("id", IntegerType, true)).add(StructField("hostname", StringType, true))
 
 
   override def run(suite: Suite, spark: SparkSession): Seq[DataFrame] = {
+    pushCodeToExecutors(spark)
     println(s"Should run SingleQueueForkJoinScheduler with ${suite.repeat} repetitions")
     val workloads = getWorkloadConfigs(suite)
 
@@ -110,5 +119,32 @@ class SingleQueueForkJoinScheduler(val distribution: DistributionBase) extends S
     outRows.toSeq.map(res => res.head)
   }
 
+  // In this case we use the function to push the code to the executors before the workload starts.
+  def pushCodeToExecutors(spark: SparkSession): Unit = {
+    var numOfTries = 0
+    val numOfInstances = spark.conf.get("spark.executor.instances").toInt
+    val tasksPerExecutor = 1
+    while (numOfTries < MAX_NUMBER_OF_DATA_CREATION_TRIES) {
+      val rdd = spark.sparkContext.parallelize(0 until numOfInstances, numOfInstances).map(i => {
+        val startTime = java.lang.System.currentTimeMillis()
+        val targetStopTime = startTime + 100 * (numOfTries +1) // TIME_TO_CREATE_EMPTY_SLICE
+        var x = 0
+        val hostname = java.net.InetAddress.getLocalHost.getHostName
+        while (java.lang.System.currentTimeMillis() < targetStopTime) {
+          x += 1
+        }
+        Row(i, hostname)
+      })
+      val hostnames = rdd.persist.collect
+      val slicesPerHost = hostnames.groupBy(_(1)).mapValues(_.length)
+      // print(hostnames)
+      if (slicesPerHost.values.exists(_ != tasksPerExecutor)) {
+        rdd.unpersist()
+        numOfTries += 1
+      } else
+        return
+    }
+    throw SparkBenchException(s"Could not create data on all nodes after $numOfTries tries.")
+  }
 
 }
