@@ -11,14 +11,18 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.math.random
 
+/**
+  * This workload should extend the DistributedBlocking workload by adding loading before blocking.
+  * Therefore it should be possible to use a previouse created RDD or passing a path which should get used
+  * for loading data.
+  * The purpose is to create a distributed workload which includes overhead caused by data transfers.
+  * TODO: Implement it correctly. The current version is only a draft and should not be used.
+  */
 object DistributedBlockingWithReading extends WorkloadDefaults {
   val name = "distributed-blocking-with-reading"
 
   override def apply(m: Map[String, Any]): DistributedBlockingWithReading = {
     val distStr = getOrThrow(m, "distribution").asInstanceOf[String]
-    //    getOrThrow(m, "mu").asInstanceOf[Double]
-//    val mu: Option[Double] = m.get("mu").asInstanceOf[Option[Double]]
-//    val multiplier: Double = m.get("multiplier").asInstanceOf[Option[Double]].getOrElse(1.0)
     val numSlices: Int = m.get("slices").asInstanceOf[Option[Int]].getOrElse(10)
     val dataPath: String = m.get("data-path").asInstanceOf[Option[String]].getOrElse("-")
     new DistributedBlockingWithReading(
@@ -35,8 +39,6 @@ case class DistributedBlockingWithReadingResult(
                                 endTimestamp: Long,
                                 generatedTimes: String
                               )
-
-
 
 case class DistributedBlockingWithReading(input: Option[String] = None, output: Option[String] = None,
                                saveMode: String = SaveModes.error, distTest: DistributionBase,
@@ -106,23 +108,6 @@ case class DistributedBlockingWithReading(input: Option[String] = None, output: 
       }
       TaskContext.get.stageId
     }).collect()(0)
-
-//    slices.mapPartitionsWithIndex { case (i, _) =>
-//      val taskId = i
-//      val jobLength = serviceTimes(i-1)
-//      val startTime = java.lang.System.currentTimeMillis()
-//      val targetStopTime = startTime + jobLength
-//      println(s"    +++ TASK $jobId.$taskId START: $startTime")
-//      while (java.lang.System.currentTimeMillis() < targetStopTime) {
-//        val x = random * 2 - 1
-//        val y = random * 2 - 1
-//      }
-//
-//      val stopTime = java.lang.System.currentTimeMillis()
-//      println("    --- TASK $jobId.$taskId STOP: $stopTime")
-//      println("    === TASK $jobId.$taskId ELAPSED: ${stopTime-startTime}")
-//      TaskContext.get.stageId
-//    }.collect()(0)
   }
 
   def loadFromDisk(spark: SparkSession, input: String): (Long, DataFrame) = time {

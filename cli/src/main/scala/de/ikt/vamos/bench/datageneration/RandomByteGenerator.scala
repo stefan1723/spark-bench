@@ -71,12 +71,8 @@ case class RandomByteGenerator(partitionSize: Int,
       )
     )
 
-  //    val (saveTime, _) = time { writeToDisk(output.get, saveMode,
-  //      spark.createDataFrame(data, dataSchema), spark) }
     val (saveTime, _) = time {
       val outputstr = output.get
-//      if(outputstr.endsWith(".csv")) throw SparkBenchException("ByteArrays cannot be saved to CSV" +
-//        ". Please try outputting to Parquet instead.")
       writeToDisk(output.get, saveMode, data.toDF(), spark)
     }
 

@@ -20,7 +20,6 @@ object ExponentialDistribution extends DistributionDefaults{
       case multiplier: Option[Int] => multiplier.getOrElse(1).toDouble
       case multiplier: Option[Double] => multiplier.getOrElse(1.0)
     }
-//    val multiplier = getOrDefault(m, "multiplier", 1.0)
     new ExponentialDistribution(mu, multiplier)
   }
 

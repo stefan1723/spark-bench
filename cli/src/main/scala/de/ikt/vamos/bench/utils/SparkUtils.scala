@@ -9,10 +9,10 @@ object SparkUtils {
     var activeExecutors = numActiveExecutors(spark.sparkContext)
     while (activeExecutors < requestedExecutors) {
       Thread.sleep(1000)
-      println(s"Waiting for executors. $activeExecutors/$requestedExecutors")
+      print(s"Waiting for executors. $activeExecutors/$requestedExecutors\n")
       activeExecutors = numActiveExecutors(spark.sparkContext)
     }
-    println(s"Got $activeExecutors/$requestedExecutors executors.")
+    print(s"Got $activeExecutors/$requestedExecutors executors.\n")
   }
 
   def numActiveExecutors(sc: SparkContext): Int = {

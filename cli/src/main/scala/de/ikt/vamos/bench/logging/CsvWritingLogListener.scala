@@ -6,8 +6,11 @@ import org.apache.spark.scheduler._
 
 
 /**
-  * This class should be added as listener to a SparkContext
-  * and will track the metrics of executed tasks.
+  * This class can be added as listener to a SparkContext
+  * and will track the metrics of the executed tasks.
+  * To use it in a spark-bench experiment you can add
+  * "spark.extraListeners" = "main.scala.de.ikt.vamos.bench.logging.CsvWritingLogListener"
+  * to the spark-submit-config configuration.
   */
 class CsvWritingLogListener extends LogSparkStatistics {
   var filepath: String = s"spark_log_${System.currentTimeMillis()}.csv"
@@ -17,7 +20,7 @@ class CsvWritingLogListener extends LogSparkStatistics {
   override def onStageCompleted(stageCompleted: SparkListenerStageCompleted): Unit = {
     val stageId = stageCompleted.stageInfo.stageId
     val currStage = stageIdToStage.get(stageId)
-    if(currStage.isEmpty)
+    if (currStage.isEmpty)
       println("Stage id unknown in onStageCompleted. Should be set at this position.")
     else {
       val stage = currStage.get
@@ -37,20 +40,20 @@ class CsvWritingLogListener extends LogSparkStatistics {
 
   def writeStageToFile(stage: LogStage): Unit = {
     val executionStats = this.executionTimeAccumulator.fold(Map.empty[String, Long])(_.value.stats)
-    for(task <- stage.tasks) {
-      if(task.taskInfo.nonEmpty) {
+    for (task <- stage.tasks) {
+      if (task.taskInfo.nonEmpty) {
         val runTime = executionStats.getOrElse(task.taskInfo.fold(-1L)(_.taskId).toString, 0L)
-        val extendedTask =  ExtendedFlatTask(task, stage, runTime)
+        val extendedTask = ExtendedFlatTask(task, stage, runTime)
         pw.write(s"${extendedTask.toJson()}\n")
       }
     }
     removeStage(stage)
   }
 
-  override def onTaskEnd(taskEnd: SparkListenerTaskEnd): Unit =  {
+  override def onTaskEnd(taskEnd: SparkListenerTaskEnd): Unit = {
     val taskInfo = taskEnd.taskInfo
     val currStage = stageIdToStage.get(taskEnd.stageId)
-    if(currStage.isEmpty) {
+    if (currStage.isEmpty) {
       writeTaskToFile(taskEnd)
     } else {
       super.onTaskEnd(taskEnd)
@@ -61,6 +64,7 @@ class CsvWritingLogListener extends LogSparkStatistics {
     * Writes the data of SparkListenerEnd to the csv file. This function should only get called if a
     * task ends which belong to a stage which is not available anymore. This usually happens if tasks can run
     * speculative and the same tasks runs more than once.
+    *
     * @param taskEnd
     */
   def writeTaskToFile(taskEnd: SparkListenerTaskEnd): Unit = {
@@ -72,7 +76,7 @@ class CsvWritingLogListener extends LogSparkStatistics {
     task.endReason = s""""${taskEnd.reason.toString}""""
     // No job data is set in the stage here. Only tasks which results are used have job data set.
     val stage = LogStage(taskEnd.stageId)
-    val extendedTask =  ExtendedFlatTask(task, stage, runTime)
+    val extendedTask = ExtendedFlatTask(task, stage, runTime)
     pw.write(s"${extendedTask.toJson()}\n")
   }
 
@@ -81,31 +85,11 @@ class CsvWritingLogListener extends LogSparkStatistics {
   }
 
   override def onApplicationStart(applicationStart: SparkListenerApplicationStart): Unit = {
-//    super.onApplicationStart(applicationStart)
     pw = new PrintWriter(new File(filepath))
     pw.write(getCsvLabelLine())
   }
 
   override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
-//    super.onApplicationEnd(applicationEnd)
     pw.close()
   }
-//
-//  override def onExecutorBlacklisted(executorBlacklisted: SparkListenerExecutorBlacklisted): Unit = print(executorBlacklisted)
-//
-//  override def onExecutorMetricsUpdate(executorMetricsUpdate: SparkListenerExecutorMetricsUpdate): Unit = print(executorMetricsUpdate)
-//
-//  override def onExecutorAdded(executorAdded: SparkListenerExecutorAdded): Unit = print(executorAdded)
-//
-//  override def onExecutorRemoved(executorRemoved: SparkListenerExecutorRemoved): Unit = print(executorRemoved)
 }
-
-//object CsvWritingLogListener {
-//  def apply(filepath: String): CsvWritingLogListener = {
-//    val csvWriter = new CsvWritingLogListener
-//    csvWriter.filepath = filepath
-//    csvWriter.pw = new PrintWriter(new File(filepath))
-//    csvWriter.pw.write(csvWriter.getCsvLabelLine())
-//    csvWriter
-//  }
-//}

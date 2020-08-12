@@ -54,17 +54,6 @@ case class RandomAsciiGenerator(partitionSize: Int,
     val timestamp = System.currentTimeMillis()
 
     val (generateTime, data) = time {
-//      spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map(i => {
-//        val x = Random.alphanumeric
-//        val tmp = new StringBuilder("")
-//        x take partitionSize foreach(x => tmp.append(x))
-//        tmp.toString
-////        val randomGenerator = ThreadLocalRandom.current()
-////        Row(Seq.fill[String](partitionSize)(RandomAsciiGenerator.chars(randomGenerator
-////          .nextInt(RandomAsciiGenerator.chars.size)).toString)
-////          .mkString(","))
-//      }).persist(StorageLevel.MEMORY_AND_DISK)
-
       spark.sparkContext.parallelize(1 to numPartitions, numPartitions).map { i =>
         i
       }.map( i => (i,Array.fill[String](partitionSize)(RandomAsciiGenerator.chars(scala.util.Random
@@ -77,8 +66,6 @@ case class RandomAsciiGenerator(partitionSize: Int,
       )
     )
 
-//    val (saveTime, _) = time { writeToDisk(output.get, saveMode,
-//      spark.createDataFrame(data, dataSchema), spark) }
     val (saveTime, _) = time { writeToDisk(output.get, saveMode,
       data.toDF(), spark) }
 

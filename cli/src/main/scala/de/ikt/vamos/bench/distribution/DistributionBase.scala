@@ -25,11 +25,6 @@ trait DistributionDefaults {
 }
 
 object DistributionBase {
-//  def createDistribution_(config: Config): DistributionBase = {
-////    createDistribution(TypesafeAccessories.configToMapStringSeqAny(config))
-//    createDistribution(TypesafeAccessories.configToMapStringSeqAny(config.root().unwrapped()
-//      .asScala.asInstanceOf[Map[String, Any]]))
-//  }
 
   def createDistribution(m: Map[String, Any]): DistributionBase = {
     val distrName = getOrThrow(m, "distribution").asInstanceOf[String]

@@ -49,6 +49,15 @@ case class ExtendedFlatTask(stageSubmissionTime: Long, launchTime:Long, finishTi
 }
 
 object ExtendedFlatTask {
+  /**
+    * Flattens log data so it can get written to a csv file.
+    * TODO: Move the version with duration in ns resolution to a different branch because it needs a modified spark
+    * version. In this implementation duration and durationNs is the same.
+    * @param task
+    * @param stage
+    * @param runTime
+    * @return
+    */
   def apply(task: LogTask, stage: LogStage, runTime: Long): ExtendedFlatTask = {
     ExtendedFlatTask(
       task.submissionTime.getOrElse(0L),
