@@ -14,14 +14,6 @@ class ForkJoinScheduler(val distribution: DistributionBase) extends SchedulerBas
     println(s"Should run ForkJoinScheduler ${distribution.toString}")
     println(s"WARNING: This scheduler is not yet implemented!")
     val workloads = getWorkloadConfigs(suite)
-    (0 to suite.repeat).flatMap { i =>
-      // This will produce one DataFrame of one row for each workload in the sequence.
-      // We're going to produce one coherent DF later from these
-      val dfSeqFromOneRun: Seq[(DataFrame, Option[RDD[_]])] = {
-        runWorkloads(suite.parallel, workloads, spark)
-      }
-      // Indicate which run of this suite this was.
-      dfSeqFromOneRun.map(_._1).map(res => res.withColumn("run", lit(i)))
-    }
+    Seq.empty[DataFrame]
   }
 }

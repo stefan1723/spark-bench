@@ -7,7 +7,7 @@ import com.ibm.sparktc.sparkbench.utils.SparkBenchException
 import com.ibm.sparktc.sparkbench.workload.{Suite, Workload}
 import de.ikt.vamos.bench.distribution.DistributionBase
 import main.scala.de.ikt.vamos.bench.utils.SparkUtils
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.scheduler.{SparkListener, SparkListenerExecutorRemoved}
 import org.apache.spark.sql.functions.lit
@@ -20,7 +20,6 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListener with SchedulerBase {
-  val MAX_NUMBER_OF_DATA_CREATION_TRIES = 5
   // Number of milliseconds to create one slice.
   // This is necessary to create the same number of slices on each executor.
   val TIME_TO_CREATE_EMPTY_SLICE = 100
@@ -55,23 +54,6 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
     spark.sparkContext.removeSparkListener(this)
     getResultsOfFinishedTasks(suite)
   }
-
-
-  //    val dfSeqFromOneRun: ForkJoinTask[Seq[DataFrame]] = ForkJoinTask.adapt(
-  //      new java.util.concurrent.Callable[Seq[DataFrame]]() {
-  //        def call(): Seq[DataFrame] = {
-  //          val runNum = tmpRun
-  //          print(s"Starting run $runNum")
-  //          val thisInterarrivalTime = tmpInterarrivalTime
-  //          val thisArrivalTime = tmpThisArrivalTime
-  //          val out = runWorkloads(suite.parallel, workloads, spark, inDf = inDf ).map(_._1).map(res => res.withColumn
-  //          ("run", lit(runNum)).withColumn("interarrivalTime", lit(thisInterarrivalTime))
-  //            .withColumn("shouldArrive", lit(thisArrivalTime)))
-  //          print(s"Ending run $runNum")
-  //          out
-  //        }
-  //      })
-  //  forkJoinPool.execute(dfSeqFromOneRun)
   def runRepetitions(numOfRepetitions: Int, suite: Suite, workloads: Seq[Workload], spark: SparkSession): Unit = {
     var inDf: Option[DataFrame] = createDataFrameForLocality(spark, suite.slices)
     inDf = if(suite.forceDistr) inDf else None
@@ -89,13 +71,7 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
         val tmpRun = completedRepetitions
         val tmpInterarrivalTime = interarrivalTime
         val tmpThisArrivalTime = shouldArriveTime //lastArrivalTime
-
-  //      val future = new FutureTask[Seq[DataFrame]](new Callable[Seq[DataFrame]]() {
-  //        def call(): Seq[DataFrame] = {
-  //
-  //        }})
-
-        print(s"Creating new job $i, should sleep ${(shouldArriveTime - System.currentTimeMillis())} while interarrival" +
+        print(s"Creating new job $i, should sleep ${shouldArriveTime - System.currentTimeMillis()} while interarrival" +
           s"time is $interarrivalTime ")
         val fut = Future {
           runJobAndGetResult(tmpRun, tmpInterarrivalTime, tmpThisArrivalTime, suite, workloads, spark, inDf)(e)
@@ -108,64 +84,25 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
         }
         val finishedJobTime = System.currentTimeMillis()
         print(s"Finished job $i in time ${finishedJobTime - creatingSparkJobTime}\n")
-  //      val dfSeqFromOneRun: Seq[DataFrame] = Await.result(fut, Duration.Inf)
         if(dfSeqFromOneRun.nonEmpty) {
           tasks += dfSeqFromOneRun.get
           interarrivalTime = distribution.nextSample().toLong
-          //      shouldArriveTime = lastArrivalTime + interarrivalTime
           shouldArriveTime += interarrivalTime
           val sleepTime = (shouldArriveTime - System.currentTimeMillis()).toLong
-          //      println(s"Should sleep ${sleepTime}ms, after handling job$i")
           Thread.sleep(max(0L, sleepTime))
-          // Indicate which run of this suite this was.
-          //      dfSeqFromOneRun.map(_._1).map(res => res.withColumn("run", lit(i)))
           completedRepetitions += 1
         }
       }
-      // TODO implement with future. Putting a timeout in blocking and check if spark job fails.
-//      else {
-//        // Lost an executor
-//        spark.sparkContext.cancelAllJobs()
-//        val numCancelledTasks = removeUnfinishedTasks()
-//        spark.sparkContext.cancelAllJobs()
-//        println(s"Lost tasks $numCancelledTasks")
-//        if(inDf.isDefined)
-//          inDf = if(suite.forceDistr) createDataFrameForLocality(spark, suite.slices) else None
-//      }
     }
   }
 
   def runJobAndGetResult(runNum: Int, thisInterarrivalTime: Long, thisArrivalTime: Long, suite: Suite,
                          workloads: Seq[Workload], spark: SparkSession, inDf: Option[DataFrame])(implicit e: ExecutionContext): Seq[DataFrame] = {
-//    val runNum = tmpRun
-//    print(s"Starting run $runNum\n")
-//    val thisInterarrivalTime = tmpInterarrivalTime
-//    val thisArrivalTime = tmpThisArrivalTime
     val out = runWorkloads(suite.parallel, workloads, spark, inDf = inDf ).map(_._1).map(res => res.withColumn
     ("run", lit(runNum)).withColumn("interarrivalTime", lit(thisInterarrivalTime))
       .withColumn("shouldArrive", lit(thisArrivalTime)))
-//    print(s"Ending run $runNum\n")
     out
   }
-
-//  def removeUnfinishedTasks(): Int = {
-//    var cancelledTasks = 0
-////    val fjPoolRunning = forkJoinPool.getQueuedTaskCount
-//    var firstTaskToCancel = -1
-//    for(taskIdx <- tasks.indices) {
-//      if (!tasks(taskIdx).isDone) {
-//        if (firstTaskToCancel == -1)
-//          firstTaskToCancel = taskIdx
-//        val cancelled = tasks(taskIdx).cancel(true)
-//        // TODO: figure out what to do if a task cannot get cancelled. Maybe throw an error?
-//        if(!cancelled)
-//          println("Could not cancel a task")
-//        cancelledTasks += 1
-//      }
-//    }
-//    tasks.remove(firstTaskToCancel, cancelledTasks)
-//    cancelledTasks
-//  }
 
   def createDataFrameForLocality(spark: SparkSession, numOfTasks: Int): Option[DataFrame] = {
     var numOfTries = 0
@@ -176,15 +113,14 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
         val startTime = java.lang.System.currentTimeMillis()
         val targetStopTime = startTime + 100 * (numOfTries +1) // TIME_TO_CREATE_EMPTY_SLICE
         var x = 0
-        val hostname = java.net.InetAddress.getLocalHost.getHostName
+        val executorIds = SparkEnv.get.executorId
         while (java.lang.System.currentTimeMillis() < targetStopTime) {
           x += 1
         }
-        Row(i, hostname)
+        Row(i, executorIds)
       })
-      val hostnames = rdd.persist.collect
-      val slicesPerHost = hostnames.groupBy(_(1)).mapValues(_.length)
-      // print(hostnames)
+      val executorIds = rdd.persist.collect
+      val slicesPerHost = executorIds.groupBy(_(1)).mapValues(_.length)
       if (slicesPerHost.values.exists(_ != tasksPerExecutor)) {
         rdd.unpersist()
         numOfTries += 1
@@ -211,33 +147,9 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
     */
   def getResultsOfFinishedTasks(suite: Suite): Seq[DataFrame] = {
     var outRows = scala.collection.mutable.ListBuffer.empty[DataFrame]
-//    // The job to store the results is also a spark job so this function can also block
-//    forkJoinPool.awaitQuiescence(0, TimeUnit.DAYS)
-//    for (task <- tasks) {
-//      outRows += task.get()
-//    }
     if (suite.repeatBuf == -1 || completedRepetitions >= suite.repeat) {
       completed = true
     }
-//    else {
-//      // TODO: Move this functionality in the base class of schedulers. (Only for schedulers
-//      //  with arrival times)
-//      // Removes some of the already finished tasks to reduce the used memory. It's not
-//      // guaranteed that all finished tasks are removed because this queuing teqchnique allows
-//      // finishing not in placed.
-//      // At this point there is no waiting until all tasks in queue have finished because
-//      // this could cause wrong arrival times when running the next repetitions.
-//      var unfinishedTaskFound = false
-//      while (!unfinishedTaskFound && tasks.nonEmpty) {
-//        val task = tasks.head
-//        if (task.isDone) {
-//          outRows += task.get()
-//          tasks.remove(0)
-//        } else
-//          unfinishedTaskFound = true
-//      }
-//    }
-//    outRows.map(res => res.head)
     outRows = tasks.map(res => res.head)
     tasks.clear()
     outRows
@@ -254,15 +166,4 @@ class SplitMergeScheduler(val distribution: DistributionBase) extends SparkListe
       print(s"Could not cancel spark jobs. No spark session is set.\n")
     }
   }
-
-
-//  class MyThread extends Runnable
-//  {
-//    override def run()
-//    {
-//      // Displaying the thread that is running
-//      println("Thread " + Thread.currentThread().getName() +
-//        " is running.")
-//    }
-//  }
 }
