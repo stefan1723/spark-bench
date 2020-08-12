@@ -21,9 +21,6 @@ import de.ikt.vamos.utils.CustomWorkloadParameter
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, SparkSession}
-//import com.databricks.spark.avro._
-//import org.apache.spark.sql.avro._
-//import org.apache.avro._
 
 object SparkFuncs {
 
@@ -59,7 +56,7 @@ object SparkFuncs {
       case Formats.parquet => true
       case Formats.csv => true
       case Formats.orc => true
-//      case Formats.avro => true
+      case Formats.avro => true
       case Formats.json => true
       case Formats.console => true
       case _ => false
@@ -108,7 +105,7 @@ object SparkFuncs {
       case Formats.csv => data.write.format("csv").mode(saveMode)
         .option("header", "true").save(outputDir)
       case Formats.orc => data.write.format("orc").mode(saveMode).save(outputDir)
-//      case Formats.avro => data.write.mode(saveMode).avro(outputDir)
+      case Formats.avro => data.write.format("avro").save(outputDir)
       case Formats.json => data.write.format("json").mode(saveMode).save(outputDir)
       case Formats.console => data.show()
       case _ => throw new Exception(s"Unrecognized or unspecified save format: $format. " +
@@ -128,7 +125,7 @@ object SparkFuncs {
     inputFormat match {
       case Formats.parquet => spark.read.parquet(inputDir)
       case Formats.orc => spark.read.orc(inputDir)
-//      case Formats.avro => spark.read.avro(inputDir)
+      case Formats.avro => spark.read.format("avro").load(inputDir)
       case Formats.json => spark.read.json(inputDir)
       case Formats.csv | _ => spark.read.option("inferSchema", "true").option("header", "true").csv(inputDir) //if unspecified, assume csv
     }
