@@ -27,7 +27,6 @@ object MultipleSuiteKickoff {
   def run(seq: Seq[MultiSuiteRunConfig]): Unit = seq.foreach { contextConf =>
     val spark = createSparkContext(seq)
     SparkUtils.waitForExecutors(spark)
-//    waitForExecutors(spark)
     if (contextConf.suitesParallel) runSuitesInParallel(contextConf.suites, spark)
     else runSuitesSerially(contextConf.suites, spark)
     spark.close()

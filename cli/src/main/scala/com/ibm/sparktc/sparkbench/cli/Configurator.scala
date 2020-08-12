@@ -67,17 +67,9 @@ object Configurator {
     val output: Option[String] = Try(config.getString("benchmark-output")).toOption
     val saveMode: String = Try(config.getString("save-mode")).getOrElse(SaveModes.error)
     val workloads: Seq[Map[String, Seq[Any]]]  = getConfigListByName("workloads", config).map(configToMapStringSeqAny)
-//    if (runMode == "split-merge" || runMode == "fork-join" || runMode == "single-queue-fork-join");
-//    val arrivalProcess = config.getConfig("arival-distribution")
     val scheduler = SchedulerBase.apply(runMode, Try{config.getConfig("arrival-distribution")}
   .getOrElse(ConfigFactory.empty()).root().unwrapped().asScala.toMap)
 
     Suite.build(workloads, descr, repeat, repeatBuf, parallel, scheduler, saveMode, slices, forceDistr, output)
   }
-
-//  def parseArrivalProcess(config: Option[Config]): Option[ArrivalProcess] = {
-//    if (config.isEmpty) None
-//    val distribution = config.get.getString(distribution)
-//    None
-//  }
 }

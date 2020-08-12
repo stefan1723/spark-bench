@@ -64,24 +64,9 @@ object SuiteKickoff {
     var i = 0 // Iterations run
     while (!s.scheduler.isCompleted) {
       // Translate the maps into runnable workloads
-      //    val workloads: Seq[Workload] = s.workloadConfigs.map(ConfigCreator.mapToConf)
       val dataframes: Seq[DataFrame] = s.scheduler.run(s, spark)
-      //    (0 until s.repeat).flatMap { i =>
-      //      // This will produce one DataFrame of one row for each workload in the sequence.
-      //      // We're going to produce one coherent DF later from these
-      //      val dfSeqFromOneRun: Seq[DataFrame] = {
-      //        s.scheduler.run(s, spark)
-      ////        if (s.runMode) runParallel(workloads, spark)
-      ////        else runSerially(workloads, spark)
-      ////        runSerially(workloads, spark)
-      //      }
-      //      // Indicate which run of this suite this was.
-      //      dfSeqFromOneRun.map(_.withColumn("run", lit(i)))
-      //    }
-
       // getting the Spark confs so we can output them in the results.
       val strSparkConfs = spark.conf.getAll
-
       // Ah, see, here's where we're joining that series of one-row DFs
       val singleDF = joinDataFrames(dataframes, spark)
       s.description.foreach(log.info)

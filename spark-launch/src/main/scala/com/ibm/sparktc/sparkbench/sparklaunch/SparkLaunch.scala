@@ -34,14 +34,6 @@ object SparkLaunch extends App {
   val (confSeq: Seq[SparkJobConf], parallel: Boolean) = mkConfs(new File(path))
   launchJobs(confSeq, parallel)
 
-//  override def main(args: Array[String]): Unit = {
-//    assert(args.nonEmpty)
-//    val path = args.head
-//    val (confSeq: Seq[SparkJobConf], parallel: Boolean) = mkConfs(new File(path))
-//
-//    launchJobs(confSeq, parallel)
-//  }
-
   def mkConfs(file: File): (Seq[SparkJobConf], Boolean) = {
     val config: Config = ConfigFactory.parseFile(file)
     val sparkBenchConfig = config.getObject("spark-bench").toConfig

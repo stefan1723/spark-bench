@@ -20,7 +20,6 @@ import sbt._
 object Dependencies {
   // Versions
 //  lazy val sparkVersion = "2.4.0"
-//  lazy val sparkVersion = "3.0.1"
    lazy val sparkVersion = "3.0.0-preview2"
   lazy val scalacheckVersion = "1.14.0"
   lazy val junitVersion = "4.12"
@@ -31,7 +30,6 @@ object Dependencies {
     "org.apache.spark" %% "spark-core"  % sparkVersion % "provided",
     "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
     "org.apache.spark" %% "spark-sql"   % sparkVersion % "provided",
-//    "com.databricks"   %% "spark-avro"  % "4.0.0"
   )
 
   val breezeDeps = Seq(
